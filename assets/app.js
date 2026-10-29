@@ -17,7 +17,9 @@ const paths = {
   bell:'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9 M10 21h4',
   menu:'M4 6h16 M4 12h16 M4 18h16', contact:'M20 21v-2a7 7 0 0 0-14 0v2 M13 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8 M3 4v10 M1 7h4'
 };
-function icon(name){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');const p=document.createElementNS(svg.namespaceURI,'path');p.setAttribute('d',paths[name]||paths.chat);svg.append(p);return svg;}
+// Glyphs and their code points come from Telegram WebK's GPL-3.0 tgico font.
+const webkGlyphs={chat:'\ue9d0',phone:'\ue9ef',video:'\uea59',plus:'\ue903',search:'\uea1d',link:'\ue9bb',shield:'\ueada',lock:'\ue9c1',send:'\uea20',back:'\ue934',more:'\ue9da',close:'\ue956',mic:'\ue9d4',screen:'\uea26',group:'\ue9a6',bell:'\uea84',menu:'\ue9cc',contact:'\uea57'};
+function icon(name){if(webkGlyphs[name]){const glyph=document.createElement('span');glyph.className='webk-icon';glyph.setAttribute('aria-hidden','true');glyph.textContent=webkGlyphs[name];return glyph;}const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');const p=document.createElementNS(svg.namespaceURI,'path');p.setAttribute('d',paths[name]||paths.chat);svg.append(p);return svg;}
 document.querySelectorAll('[data-icon]').forEach(el=>el.append(icon(el.dataset.icon)));
 function node(tag, cls, text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
 function show(id, visible=true){$(id).hidden=!visible;}

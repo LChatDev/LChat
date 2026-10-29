@@ -22,11 +22,23 @@ window.fetch = async (input, options = {}) => {
   else throw new Error('Unexpected request: ' + url);
   return {ok:true, status:200, json:async()=>value};
 };
-for (const name of ['app.js','settings.js','bots.js']) window.eval(fs.readFileSync(path.join(root,'assets',name),'utf8'));
+for (const name of ['app.js','settings.js','bots.js','webk-ui.js']) window.eval(fs.readFileSync(path.join(root,'assets',name),'utf8'));
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 (async () => {
   await tick();
   assert.equal(typeof window.LChat.api, 'function');
+  const menuButton = window.document.getElementById('main-menu');
+  const menu = window.document.getElementById('webk-menu');
+  menuButton.click();
+  assert.equal(menu.hidden, false);
+  assert.equal(menuButton.getAttribute('aria-expanded'), 'true');
+  assert.equal(menu.querySelector('[data-proxy-target="bots-button"] .webk-icon')?.textContent, String.fromCodePoint(0xe939));
+  window.document.dispatchEvent(new window.KeyboardEvent('keydown', {key:'Escape', bubbles:true}));
+  assert.equal(menu.hidden, true);
+  menuButton.click();
+  menu.querySelector('[data-proxy-target="bots-button"]').click();
+  await tick();
+  assert.equal(menu.hidden, true);
   window.document.getElementById('bots-button').click();
   await tick();
   assert.equal(window.document.getElementById('modal-title').textContent, 'My bots');
