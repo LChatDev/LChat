@@ -8,6 +8,8 @@ LChat uses WebRTC: PHP and MySQL exchange call signaling; participants exchange 
 2. Test two separate accounts on two different networks. STUN may be enough for some networks. If a call cannot connect, participants cannot hear one another, or one network blocks direct traffic, configure TURN.
 3. For reliable TURN, use a VPS or a managed TURN provider with publicly reachable listener **and relay ports**. Ordinary shared PHP hosting normally cannot run a persistent TURN daemon. A single TCP tunnel to the TURN listener alone is not a complete TURN setup: relayed media also needs reachable relay addresses and ports. Check the tunnel provider's UDP and port-range support.
 
+See [TUNNELS.md](TUNNELS.md) for free tunneling and private networking options.
+
 ## Example: coturn on a Linux VPS
 
 This example is for a VPS with a public IPv4 address and Ubuntu/Debian. Replace every placeholder with your own value. Follow your host's firewall documentation; keep your existing SSH access working. See the [coturn configuration reference](https://github.com/coturn/coturn/blob/master/docker/coturn/turnserver.conf) for platform-specific options.

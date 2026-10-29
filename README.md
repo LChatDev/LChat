@@ -25,6 +25,7 @@ Download the installable [LChat 2.0.4 APK](https://github.com/leosmleol-svg/LCha
 5. Register the configured `initial_admin_username` promptly and sign in as that user to open `admin.php`. Configure TURN before testing calls across networks.
 
 Follow the complete [hosting and installation guide](HOSTING.md) and the separate [calls and TURN guide](CALLS.md) for configuration, ports, troubleshooting, and updates.
+For options to expose a local server, see [free tunnels and private networking](TUNNELS.md).
 
 The web app checks browser cookies and PHP sessions during login. If a login returns to the sign-in page, verify the configured session domain, HTTPS/proxy settings, and PHP session storage. Browser calls require a secure context even when the site itself is accessible over HTTP.
 
