@@ -27,7 +27,8 @@ function config(): array {
     return $config;
 }
 function site_name(): string {
-    $name = config()['site_name'] ?? 'LChat';
+    try { $name = site_settings()['site_name']; }
+    catch (Throwable $e) { $name = config()['site_name'] ?? 'LChat'; }
     return is_string($name) && trim($name) !== '' ? mb_substr(trim($name), 0, 60, 'UTF-8') : 'LChat';
 }
 function fail(int $status, string $message): never {
@@ -122,7 +123,7 @@ function rate(string $key, int $max, int $seconds): void {
 }
 function ice_servers(array $ctx): array {
     $c = config(); $servers = $c['ice_servers'] ?? [];
-    $turn = $c['turn'] ?? [];
+    $turn = site_settings()['turn'];
     if (!empty($turn['secret']) && !empty($turn['urls'])) {
         $username = (time() + (int)($turn['ttl'] ?? 3600)) . ':' . substr(hash('sha256', $ctx['actor']), 0, 12);
         $servers[] = ['urls' => $turn['urls'], 'username' => $username, 'credential' => base64_encode(hash_hmac('sha1', $username, $turn['secret'], true))];
@@ -130,7 +131,7 @@ function ice_servers(array $ctx): array {
     return $servers;
 }
 function call_transport(): string {
-    return (config()['call_transport'] ?? 'all') === 'relay' ? 'relay' : 'all';
+    return site_settings()['call_transport'];
 }
 function room(string $token, array $ctx): array {
     if (!preg_match('/^[a-f0-9]{48}$/D', $token)) fail(404, 'Call not found.');
@@ -152,6 +153,7 @@ function transaction(callable $action): mixed {
 }
 require_once __DIR__ . '/apis/features.php';
 require_once __DIR__ . '/apis/bot_accounts.php';
+require_once __DIR__ . '/apis/site_settings.php';
 require_once __DIR__ . '/apis/bot_creator.php';
 require_once __DIR__ . '/apis/bot_platform.php';
 require_once __DIR__ . '/apis/bot_files.php';
