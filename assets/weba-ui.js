@@ -29,6 +29,50 @@
     glyph.textContent = String.fromCodePoint(parseInt(item.dataset.menuIcon.slice(2), 16));
     item.prepend(glyph);
   });
+  const tabs = document.querySelector('.sidebar-tabs');
+  if (tabs) {
+    const positionIndicator = () => {
+      const active = tabs.querySelector('button.active');
+      if (!active) return;
+      const tab = tabs.getBoundingClientRect();
+      const button = active.getBoundingClientRect();
+      tabs.style.setProperty('--wa-tab-x', `${button.left - tab.left}px`);
+      tabs.style.setProperty('--wa-tab-width', `${button.width}px`);
+    };
+    new MutationObserver(() => requestAnimationFrame(positionIndicator))
+      .observe(tabs, {subtree: true, childList: true, attributes: true, attributeFilter: ['class']});
+    window.addEventListener('resize', positionIndicator);
+    requestAnimationFrame(positionIndicator);
+  }
+  document.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    const target = event.target.closest('.chat-row, .sidebar-tabs button, .icon-button, .send-button, .primary, .weba-menu button, .weba-menu a');
+    if (!target) return;
+    const rect = target.getBoundingClientRect();
+    const ripple = document.createElement('span');
+    ripple.className = 'weba-ripple';
+    ripple.style.left = `${event.clientX - rect.left}px`;
+    ripple.style.top = `${event.clientY - rect.top}px`;
+    target.append(ripple);
+    ripple.addEventListener('animationend', () => ripple.remove(), {once: true});
+  });
+  let switchFinish;
+  document.getElementById('chat-list')?.addEventListener('click', event => {
+    if (!event.target.closest('.chat-row')) return;
+    const panel = document.getElementById('active-chat');
+    if (!panel) return;
+    if (switchFinish) panel.removeEventListener('animationend', switchFinish);
+    panel.classList.remove('weba-switch');
+    void panel.offsetWidth;
+    panel.classList.add('weba-switch');
+    switchFinish = event => {
+      if (event.target !== panel) return;
+      panel.classList.remove('weba-switch');
+      panel.removeEventListener('animationend', switchFinish);
+      switchFinish = undefined;
+    };
+    panel.addEventListener('animationend', switchFinish);
+  });
   function closeMenu(returnFocus = false) {
     if (menu.hidden) return;
     menu.hidden = true;
@@ -52,6 +96,23 @@
   const input = document.getElementById('message-input');
   let emojiPanel;
   if (composer && input) {
+    const voiceButton = document.getElementById('voice-record');
+    const sendButton = composer.querySelector('.send-button');
+    if (voiceButton && sendButton) {
+      composer.insertBefore(voiceButton, sendButton);
+      voiceButton.textContent = String.fromCodePoint(0xf1d0);
+      voiceButton.classList.add('weba-icon');
+      const updateAction = () => {
+        const hasText = input.value.trim().length > 0;
+        voiceButton.hidden = hasText;
+        sendButton.hidden = !hasText;
+        composer.classList.toggle('weba-has-text', hasText);
+      };
+      input.addEventListener('input', updateAction);
+      composer.addEventListener('submit', () => setTimeout(updateAction, 300));
+      document.querySelector('.chat-list')?.addEventListener('click', () => setTimeout(updateAction, 0));
+      updateAction();
+    }
     const emojiButton = document.createElement('button');
     emojiButton.id = 'emoji-button';
     emojiButton.type = 'button';

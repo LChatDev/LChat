@@ -23,7 +23,7 @@ try {
     $error = $e instanceof RuntimeException && !($e instanceof PDOException) ? $e->getMessage() : 'Could not connect to the database or create tables. Check the settings and PHP log.';
 }
 ?>
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Setup · LChat</title><link rel="stylesheet" href="assets/style.css"><link rel="stylesheet" href="assets/theme.css?v=20261013-dark1"><link rel="stylesheet" href="assets/details.css?v=20261014"><link rel="stylesheet" href="assets/aurora.css?v=20261026-aurora1"><link rel="stylesheet" href="assets/weba-pages.css?v=20261029-weba1"></head>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Setup · LChat</title><link rel="stylesheet" href="assets/style.css"><link rel="stylesheet" href="assets/theme.css?v=20261013-dark1"><link rel="stylesheet" href="assets/details.css?v=20261014"><link rel="stylesheet" href="assets/aurora.css?v=20261026-aurora1"><link rel="stylesheet" href="assets/weba-pages.css?v=20261029-weba2"></head>
 <body class="install-body"><main class="install-card"><span class="brand-mark">L</span><h1>LChat setup</h1>
 <?php if ($done): ?><p>Tables created. You can now register.</p><p class="muted">Delete install.php and clear install_key in the configuration.</p><a class="button primary" href="index.php">Open messenger</a>
 <?php else: ?><p>Database connection is configured in <code>config.php</code>. Enter the installation key to create or update the tables.</p>

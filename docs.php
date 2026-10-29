@@ -17,7 +17,7 @@
     @media(max-width:760px){.top nav{gap:10px}.top nav a{font-size:13px}.layout{display:block}.toc{position:static;margin-bottom:20px}.toc a{display:inline-block}.section{padding:20px}.hero{padding-top:44px}.commands{grid-template-columns:1fr;gap:0}.commands span{margin-bottom:12px}}
   </style>
   <link rel="stylesheet" href="assets/aurora.css?v=20261026-aurora1">
-<link rel="stylesheet" href="assets/weba-pages.css?v=20261029-weba1"></head>
+<link rel="stylesheet" href="assets/weba-pages.css?v=20261029-weba2"></head>
 <body>
   <header class="top"><div class="shell top-inner"><a class="brand" href="index.php"><span>L</span>LChat</a><nav><a href="index.php">Open messenger</a><a href="#methods">API methods</a></nav></div></header>
   <div class="shell">
