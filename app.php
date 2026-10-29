@@ -26,6 +26,10 @@ function config(): array {
     }
     return $config;
 }
+function site_name(): string {
+    $name = config()['site_name'] ?? 'LChat';
+    return is_string($name) && trim($name) !== '' ? mb_substr(trim($name), 0, 60, 'UTF-8') : 'LChat';
+}
 function fail(int $status, string $message): never {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');

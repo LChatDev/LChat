@@ -9,9 +9,12 @@ return [
         'password' => 'YOUR_DATABASE_PASSWORD',
     ],
     'install_key' => 'REPLACE_WITH_A_LONG_RANDOM_SECRET',
+    // Public name shown in the web interface. Existing installations default to LChat.
+    'site_name' => 'LChat',
     'registration_open' => true,
     'session_name' => 'lchat_session',
     'session_domain' => '',
+    // WebRTC uses a mesh connection; keep group calls small.
     'max_call_participants' => 8,
     'ice_servers' => [
         ['urls' => 'stun:stun.l.google.com:19302'],
