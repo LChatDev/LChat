@@ -30,7 +30,7 @@ function bot_creator_state(int $uid, string $stage = '', string $draftName = '')
 }
 
 function bot_creator_help(): string {
-    return "Привет! Я @BotCreator. Создам бота LChat и выдам ему API-токен.\n\n/newbot — создать бота\n/mybots — список ваших ботов\n/token @имябота — заменить API-токен\n/setname @имябота Новое имя — изменить имя\n/cancel — отменить создание\n/help — эта подсказка\n\nДокументация: https://chat.lbs.su/docs.php";
+    return "Hi! I am @BotCreator. I can create an LChat bot and give it an API token.\n\n/newbot — create a bot\n/mybots — list your bots\n/token @yourbot — replace the API token\n/setname @yourbot New name — change the display name\n/cancel — cancel creation\n/help — show this help\n\nDocumentation: https://chat.lbs.su/docs.php";
 }
 
 function bot_creator_answer(int $uid, string $body): string {
@@ -39,47 +39,47 @@ function bot_creator_answer(int $uid, string $body): string {
     if (preg_match('~^/(?:start|help)(?:@botcreator)?$~iD', $body)) return bot_creator_help();
     if (preg_match('~^/cancel(?:@botcreator)?$~iD', $body)) {
         bot_creator_state($uid);
-        return 'Создание отменено. Напишите /newbot, чтобы начать заново.';
+        return 'Creation cancelled. Send /newbot to start again.';
     }
     if (preg_match('~^/newbot(?:@botcreator)?$~iD', $body)) {
         bot_creator_state($uid, 'name');
-        return 'Как назвать нового бота? Отправьте его отображаемое имя (2–60 символов).';
+        return 'What should the new bot be called? Send its display name (2–60 characters).';
     }
     if (preg_match('~^/mybots(?:@botcreator)?$~iD', $body)) {
         $bots = query('SELECT u.username, u.name FROM bot_accounts b JOIN users u ON u.id = b.bot_user_id WHERE b.owner_user_id = ? ORDER BY b.bot_user_id DESC', [$uid])->fetchAll();
-        if (!$bots) return 'У вас пока нет ботов. Напишите /newbot.';
+        if (!$bots) return 'You do not have any bots yet. Send /newbot.';
         $lines = array_map(static fn(array $bot): string => $bot['name'] . ' · @' . $bot['username'], $bots);
-        return "Ваши боты:\n" . implode("\n", $lines) . "\n\nНовый токен: /token @имябота";
+        return "Your bots:\n" . implode("\n", $lines) . "\n\nNew token: /token @yourbot";
     }
     if (preg_match('~^/(?:token|newtoken)(?:@botcreator)?\s+@?([a-z][a-z0-9_]{2,31})$~iD', $body, $match)) {
         $bot = one('SELECT b.bot_user_id, u.username FROM bot_accounts b JOIN users u ON u.id = b.bot_user_id WHERE b.owner_user_id = ? AND u.username = ?', [$uid, strtolower($match[1])]);
-        if (!$bot) return 'Ваш бот не найден. Посмотрите /mybots.';
+        if (!$bot) return 'Bot not found. Try /mybots.';
         $token = bot_account_rotate($uid, (int)$bot['bot_user_id']);
-        return "Новый API-токен @{$bot['username']}:\n{$token}\n\nСтарый токен уже отключён. Храните новый как пароль и не публикуйте его.";
+        return "New API token @{$bot['username']}:\n{$token}\n\nThe old token has been disabled. Keep the new one private.";
     }
     if (preg_match('~^/setname(?:@botcreator)?\s+@?([a-z][a-z0-9_]{2,31})\s+(.+)$~isD', $body, $match)) {
         $name = trim($match[2]);
-        if (mb_strlen($name, 'UTF-8') < 2 || mb_strlen($name, 'UTF-8') > 60) return 'Новое имя: от 2 до 60 символов.';
+        if (mb_strlen($name, 'UTF-8') < 2 || mb_strlen($name, 'UTF-8') > 60) return 'New name: 2 to 60 characters.';
         $bot = one('SELECT b.bot_user_id FROM bot_accounts b JOIN users u ON u.id = b.bot_user_id WHERE b.owner_user_id = ? AND u.username = ?', [$uid, strtolower($match[1])]);
-        if (!$bot) return 'Ваш бот не найден. Посмотрите /mybots.';
+        if (!$bot) return 'Bot not found. Try /mybots.';
         query('UPDATE users SET name = ? WHERE id = ?', [$name, $bot['bot_user_id']]);
-        return 'Имя бота @' . strtolower($match[1]) . ' изменено на «' . $name . '».';
+        return 'Bot name @' . strtolower($match[1]) . ' changed to “' . $name . '”.';
     }
     $state = one('SELECT stage, draft_name FROM bot_creator_sessions WHERE user_id = ?', [$uid]);
-    if ($state && str_starts_with($body, '/')) return 'Сейчас создаётся бот. Отправьте запрошенное значение или /cancel.';
+    if ($state && str_starts_with($body, '/')) return 'A bot is being created. Send the requested value or /cancel.';
     if (($state['stage'] ?? '') === 'name') {
-        if (mb_strlen($body, 'UTF-8') < 2 || mb_strlen($body, 'UTF-8') > 60) return 'Имя должно содержать от 2 до 60 символов. Попробуйте ещё раз.';
+        if (mb_strlen($body, 'UTF-8') < 2 || mb_strlen($body, 'UTF-8') > 60) return 'Name must be 2 to 60 characters long. Try again.';
         bot_creator_state($uid, 'username', $body);
-        return 'Теперь придумайте логин, заканчивающийся на bot. Например, helperbot. Разрешены латинские буквы, цифры и _.';
+        return 'Now choose a username ending in bot, for example helperbot. Latin letters, digits, and underscores are allowed.';
     }
     if (($state['stage'] ?? '') === 'username') {
         try { $bot = bot_account_create($uid, $state['draft_name'], $body); }
-        catch (DomainException $e) { return $e->getMessage() . ' Попробуйте другой логин или /cancel.'; }
+        catch (DomainException $e) { return $e->getMessage() . ' Try another username or /cancel.'; }
         bot_creator_state($uid);
-        return "Бот @{$bot['username']} создан. API-токен:\n{$bot['token']}\n\nСкопируйте его сейчас. Используйте только на своём сервере; документация: https://chat.lbs.su/docs.php";
+        return "Bot @{$bot['username']} created. API token:\n{$bot['token']}\n\nCopy it now. Use it only on your server; documentation: https://chat.lbs.su/docs.php";
     }
     if ($command === '') return bot_creator_help();
-    return 'Неизвестная команда. Напишите /help или /newbot.';
+    return 'Unknown command. Send /help or /newbot.';
 }
 
 function bot_creator_process(int $chatId, int $senderId, int $messageId, string $body): void {

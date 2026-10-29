@@ -8,7 +8,7 @@ function account_call_state(int $uid): array {
 function assert_account_available(int $uid): void {
     if (!$uid) return;
     query('UPDATE users SET last_seen = last_seen WHERE id = ?', [$uid]);
-    if (account_call_state($uid)['status'] === 'in_call') throw new DomainException('Вы уже в звонке в другой вкладке или приложении. Завершите текущий разговор.');
+    if (account_call_state($uid)['status'] === 'in_call') throw new DomainException('You are already in a call in another tab or app. End that call first.');
 }
 function account_incoming_calls(int $uid, ?array $active = null): array {
     $active ??= account_call_state($uid);

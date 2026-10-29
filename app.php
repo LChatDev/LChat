@@ -11,7 +11,7 @@ function config(): array {
     static $config;
     if ($config === null) {
         $path = getenv('LCHAT_CONFIG') ?: __DIR__ . '/config.php';
-        if (!is_file($path)) fail(503, 'Сначала настройте config.php и откройте install.php.');
+        if (!is_file($path)) fail(503, 'Configure config.php first, then open install.php.');
         $config = require $path;
         $local = dirname($path) . '/selfhost/settings.php';
         if (is_file($local)) {
@@ -87,21 +87,21 @@ function login_session(int $id): void {
 }
 function require_user(array $ctx): array {
     $user = $ctx['uid'] ? one('SELECT id, username, name, last_seen FROM users WHERE id = ?', [$ctx['uid']]) : null;
-    if (!$user) fail(401, 'Войдите в аккаунт.');
-    if (service_ban((int)$user['id'])) fail(403, 'Ваш аккаунт заблокирован администратором.');
+    if (!$user) fail(401, 'Sign in to your account.');
+    if (service_ban((int)$user['id'])) fail(403, 'Your account has been banned by an administrator.');
     return $user;
 }
 function field(array $data, string $key, int $min, int $max): string {
     $v = $data[$key] ?? '';
-    if (!is_string($v)) fail(422, 'Некорректное поле: ' . $key);
+    if (!is_string($v)) fail(422, 'Invalid field: ' . $key);
     $v = trim($v);
     $n = mb_strlen($v, 'UTF-8');
-    if ($n < $min || $n > $max) fail(422, 'Поле «' . $key . '»: от ' . $min . ' до ' . $max . ' символов.');
+    if ($n < $min || $n > $max) fail(422, 'Field “' . $key . '”: from ' . $min . ' to ' . $max . ' characters.');
     return $v;
 }
 function member(int $chat, int $uid): array {
     $row = one('SELECT c.*, m.role, m.last_read FROM chats c JOIN members m ON m.chat_id = c.id WHERE c.id = ? AND m.user_id = ?', [$chat, $uid]);
-    if (!$row) fail(403, 'Нет доступа к этому чату.');
+    if (!$row) fail(403, 'You cannot access this chat.');
     return $row;
 }
 function rate(string $key, int $max, int $seconds): void {
@@ -114,7 +114,7 @@ function rate(string $key, int $max, int $seconds): void {
         query('INSERT INTO rate_limits (bucket, hits, reset_at) VALUES (?, 1, ?) ON CONFLICT(bucket) DO UPDATE SET hits = CASE WHEN reset_at < ? THEN 1 ELSE hits + 1 END, reset_at = CASE WHEN reset_at < ? THEN ? ELSE reset_at END', [$key, $end, $now, $now, $end]);
     }
     $r = one('SELECT hits FROM rate_limits WHERE bucket = ?', [$key]);
-    if ((int)$r['hits'] > $max) { header('Retry-After: ' . $seconds); fail(429, 'Слишком много запросов. Попробуйте позже.'); }
+    if ((int)$r['hits'] > $max) { header('Retry-After: ' . $seconds); fail(429, 'Too many requests. Try again later.'); }
 }
 function ice_servers(array $ctx): array {
     $c = config(); $servers = $c['ice_servers'] ?? [];
@@ -129,16 +129,16 @@ function call_transport(): string {
     return (config()['call_transport'] ?? 'all') === 'relay' ? 'relay' : 'all';
 }
 function room(string $token, array $ctx): array {
-    if (!preg_match('/^[a-f0-9]{48}$/D', $token)) fail(404, 'Звонок не найден.');
+    if (!preg_match('/^[a-f0-9]{48}$/D', $token)) fail(404, 'Call not found.');
     $r = one('SELECT * FROM rooms WHERE token = ?', [$token]);
-    if (!$r) fail(404, 'Звонок не найден.');
+    if (!$r) fail(404, 'Call not found.');
     if (!$r['is_public']) member((int)$r['chat_id'], (int)require_user($ctx)['id']);
-    if ($r['ended_at'] || $r['expires_at'] < stamp()) fail(410, 'Этот звонок уже завершён. Создайте новый.');
+    if ($r['ended_at'] || $r['expires_at'] < stamp()) fail(410, 'This call has ended. Start a new one.');
     return $r;
 }
 function participant(array $r, string $id, array $ctx): array {
     $p = one('SELECT * FROM participants WHERE id = ? AND room_id = ? AND owner_key = ? AND left_at IS NULL', [$id, $r['id'], hash('sha256', $ctx['actor'])]);
-    if (!$p || $p['last_seen'] < stamp(-40)) fail(403, 'Подключение истекло. Войдите в звонок заново.');
+    if (!$p || $p['last_seen'] < stamp(-40)) fail(403, 'Your connection expired. Rejoin the call.');
     return $p;
 }
 function transaction(callable $action): mixed {

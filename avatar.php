@@ -6,7 +6,7 @@ try {
     ensure_features(); require_user(context());
     $id = (int)($_GET['id'] ?? 0);
     $user = one('SELECT name FROM users WHERE id = ?', [$id]);
-    if (!$user) fail(404, 'Пользователь не найден.');
+    if (!$user) fail(404, 'User not found.');
     $photo = one('SELECT stored_name FROM user_avatars WHERE user_id = ?', [$id]);
     header('X-Content-Type-Options: nosniff'); header('Cache-Control: private, max-age=60');
     if ($photo && preg_match('/^[a-f0-9]{48}\.png$/D', $photo['stored_name']) && is_file(__DIR__ . '/files/' . $photo['stored_name'])) {
@@ -16,4 +16,4 @@ try {
         header('Content-Type: image/svg+xml'); header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox");
         echo '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" rx="50" fill="#3390ec"/><text x="50" y="64" text-anchor="middle" font-family="sans-serif" font-size="45" fill="white">' . $letter . '</text></svg>';
     }
-} catch (Throwable $e) { error_log('LChat avatar: ' . $e->getMessage()); fail(500, 'Не удалось загрузить фото.'); }
+} catch (Throwable $e) { error_log('LChat avatar: ' . $e->getMessage()); fail(500, 'Could not upload the photo.'); }

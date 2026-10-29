@@ -1,52 +1,51 @@
 # LChat Bot API
 
-Публичная HTML-документация для хостинга: `https://chat.lbs.su/docs.php`.
+Create a bot in LChat by messaging `@BotCreator` with `/newbot`. The bot creator asks for a display name and a username ending in `bot`, then returns an API token. Keep the token private. `/mybots` lists your bots; `/token @yourbot` rotates a token; `/setname @yourbot New name` changes its display name.
 
-В мессенджере найдите `@BotCreator` или нажмите **🤖 Мои боты → Написать @BotCreator**. Команда `/newbot` пошагово спрашивает имя и логин и выдаёт API-токен. `/mybots` показывает ваших ботов; `/token @имябота` выпускает новый токен и сразу отключает старый; `/setname @имябота Новое имя` меняет имя; `/cancel` отменяет создание.
+The base endpoint is `https://chat.lbs.su/bot-api.php?method=METHOD`. Set the `Authorization: Bearer YOUR_TOKEN` header, or use `X-LChat-Bot-Token`. When Apache rewrite rules are enabled, `https://chat.lbs.su/bot<TOKEN>/<METHOD>` also works. All responses are JSON with `ok` and either `result` or `error_code` plus `description`.
 
-Bot API работает на том же PHP-хостинге, что и сайт. Войдите в LChat, нажмите **🤖 Мои боты** либо напишите `@BotCreator`, укажите имя и логин с окончанием `bot`. Скопируйте показанный токен и храните его как пароль. Кнопка «Новый токен» и команда `/token` немедленно отключают старый.
+## Methods
 
-Откройте личный чат с ботом или добавьте его в свою группу/канал через «Мои боты». Бот получает только сообщения чатов, в которых состоит, и только после вступления. Участники видят отправителя как отдельный аккаунт бота.
+| Method | Purpose |
+| --- | --- |
+| `getMe`, `getChat` | Read bot and accessible chat information. |
+| `getUpdates` | Poll messages and callback queries; use `offset` and `limit`. |
+| `setWebhook`, `deleteWebhook`, `getWebhookInfo` | Manage an HTTPS webhook. |
+| `sendMessage` | Send text, inline buttons, or a reply keyboard. |
+| `sendDocument`, `sendPhoto`, `sendAudio`, `sendVideo`, `sendVoice`, `sendAnimation` | Upload a file or use an accessible `file_id`. |
+| `getFile` | Read file metadata and download path. |
+| `editMessageText`, `editMessageReplyMarkup`, `deleteMessage` | Edit or delete a bot message. |
+| `answerCallbackQuery` | Acknowledge an inline button press. |
 
-Основной путь: `https://chat.lbs.su/bot<TOKEN>/<METHOD>`. Если хостинг не применяет правила `.htaccess`, используйте `https://chat.lbs.su/bot-api.php?token=<TOKEN>&method=<METHOD>`. Для уменьшения попадания токена в URL и журналы запросов можно передать `Authorization: Bearer <TOKEN>` и указать только `?method=<METHOD>`.
+Bots receive messages only from chats they have joined, and only after joining. With `getUpdates`, save the last `update_id + 1` as the next offset. Use a delay between polls. An active webhook disables polling.
 
-Ответ всегда JSON: `{"ok":true,"result":...}` или `{"ok":false,"error_code":400,"description":"..."}`. Текстовые методы принимают JSON или обычные поля формы. Токен храните как пароль; не вставляйте его в клиентский JavaScript или публичную страницу.
+## Buttons
 
-## Методы
-
-| Метод | HTTP | Поля | Результат |
-| --- | --- | --- | --- |
-| `getMe` | GET | — | Данные бота |
-| `getUpdates` | GET | `offset` (с 0), `limit` (1–100) | Очередь сообщений и нажатий; следующий offset = последний `update_id + 1` |
-| `getChat` | GET | `chat_id` | Чат, доступный боту |
-| `setWebhook` / `deleteWebhook` | POST | `url`, необязательные `secret_token`, `drop_pending_updates` | Включить или отключить HTTPS-вебхук |
-| `getWebhookInfo` | GET | — | Адрес, число ожидающих событий и последняя ошибка |
-| `sendMessage` | POST | `chat_id`, `text`, необязательные `reply_to_message_id`, `reply_markup` | Отправленное сообщение, inline-кнопки или обычная клавиатура |
-| `sendDocument`, `sendPhoto`, `sendAudio`, `sendVideo`, `sendVoice`, `sendAnimation` | POST | `chat_id`, файл через multipart или `file_id`, необязательные `caption`, `reply_markup` | Медиа-сообщение |
-| `getFile` | GET | `file_id` | Метаданные и путь для скачивания через `bot-file.php` |
-| `editMessageText` | POST | `chat_id`, `message_id`, `text` | Изменённое сообщение бота |
-| `editMessageReplyMarkup` | POST | `chat_id`, `message_id`, `reply_markup` | Изменённые inline-кнопки |
-| `answerCallbackQuery` | POST | `callback_query_id`, необязательный `text` | Ответ на нажатие кнопки |
-| `deleteMessage` | POST | `chat_id`, `message_id` | `true`; только собственное сообщение бота |
-
-`getUpdates` использует короткий опрос и несовместим с одновременно активным вебхуком. Установка `setWebhook` требует публичный HTTPS-домен на порту 443 или 8443 и PHP-расширение `curl`; доставка проверяет TLS и IP адрес. После входящего запроса LChat пробует отправить ожидающие события. Для надежных повторов при простое сайта запустите `php tools/bot-webhook-worker.php` по расписанию. Если у хостинга нет cron, события будут повторяться только после следующего запроса. Параметр `drop_pending_updates` удаляет ожидающие события лишь при значении `true`, `1`, `yes` или `on`.
-
-Файлы до 8 МБ требуют PHP `fileinfo`; суммарная квота файлов бота — 200 МБ. `getFile.result.file_path` возвращает относительный путь; скачивание требует тот же Bearer-токен или параметр `token`. В `reply_markup` поддерживается `inline_keyboard` с кнопками `callback_data` или HTTPS `url` (до 32 кнопок). Нажатие приходит как `callback_query` в очереди, ответ пользователю отправляется через `answerCallbackQuery`. Обычная `keyboard` показывает текстовые кнопки под полем ввода; нажатие отправляет боту сообщение с текстом кнопки. Поддерживаются `resize_keyboard`, `one_time_keyboard`, `input_field_placeholder` и `remove_keyboard`. Кнопки запроса контакта и местоположения пока не поддерживаются. После обновления на очередь старые сообщения не переотправляются. Реализован перечисленный набор совместимых методов; полный Telegram Bot API, включая платежи, стикеры и игры, не поддерживается.
-
-Пример обычной клавиатуры в поле `reply_markup` метода `sendMessage`:
+Pass `reply_markup` to `sendMessage`. For inline buttons:
 
 ```json
-{"keyboard":[[{"text":"Помощь"},{"text":"Профиль"}],[{"text":"Настройки"}]],"resize_keyboard":true,"one_time_keyboard":false,"input_field_placeholder":"Выберите команду"}
+{"inline_keyboard":[[{"text":"Done","callback_data":"done"},{"text":"Website","url":"https://example.com"}]]}
 ```
 
-Убрать её можно следующим сообщением с `"reply_markup":{"remove_keyboard":true}`. Редактирование клавиатуры через `editMessageReplyMarkup` относится только к inline-кнопкам.
+The button press arrives as `callback_query`. Reply with `answerCallbackQuery`. URL buttons require HTTPS.
 
-## Пример
+For buttons above the message field:
 
-```bash
-curl -H "Authorization: Bearer ВАШ_ТОКЕН" "https://chat.lbs.su/bot-api.php?method=getMe"
-curl -H "Authorization: Bearer ВАШ_ТОКЕН" "https://chat.lbs.su/bot-api.php?method=getUpdates&offset=0"
-curl -X POST -H "Authorization: Bearer ВАШ_ТОКЕН" -H "Content-Type: application/json" -d '{"chat_id":123,"text":"Привет!"}' "https://chat.lbs.su/bot-api.php?method=sendMessage"
+```json
+{"keyboard":[[{"text":"Help"},{"text":"Profile"}]],"resize_keyboard":true}
 ```
 
-`chat_id` берите из `message.chat.id` ответа `getUpdates` или результата `getChat`. Запускайте опрос с паузой между запросами и сохраняйте последний offset на стороне своего бота.
+Pressing a reply-keyboard button sends its text as a message. `one_time_keyboard` and `input_field_placeholder` are supported. Send `{"remove_keyboard":true}` to hide the keyboard.
+
+## Examples
+
+```sh
+curl -H "Authorization: Bearer YOUR_TOKEN" "https://chat.lbs.su/bot-api.php?method=getMe"
+curl -H "Authorization: Bearer YOUR_TOKEN" "https://chat.lbs.su/bot-api.php?method=getUpdates&offset=0"
+curl -X POST -H "Authorization: Bearer YOUR_TOKEN" -H "Content-Type: application/json" -d '{"chat_id":123,"text":"Hello!"}' "https://chat.lbs.su/bot-api.php?method=sendMessage"
+curl -H "Authorization: Bearer YOUR_TOKEN" -F "chat_id=123" -F "document=@photo.png" "https://chat.lbs.su/bot-api.php?method=sendDocument"
+```
+
+Webhooks require a public HTTPS URL. When setting a webhook, you can provide `secret_token`; verify the `X-Telegram-Bot-Api-Secret-Token` header in your receiver. The site attempts delivery through cURL after requests. For retries when there is no new site traffic, run `php tools/bot-webhook-worker.php` with cron.
+
+Files are limited to 8 MB, with a 200 MB bot storage limit. LChat implements the methods listed above, not the full Telegram Bot API. Payments, stickers, and many other Telegram methods are unavailable.

@@ -46,7 +46,7 @@ function group_call_started(array $room, int $uid): void {
     if (!$room['chat_id'] || !$uid) return;
     $chat = one('SELECT kind FROM chats WHERE id = ?', [$room['chat_id']]);
     if (($chat['kind'] ?? '') !== 'group' || one('SELECT message_id FROM message_events WHERE room_id = ? AND kind = ?', [$room['id'], 'call_started'])) return;
-    query('INSERT INTO messages (chat_id, user_id, body, nonce, created_at) VALUES (?, ?, ?, ?, ?)', [$room['chat_id'], $uid, 'Звонок начался', 'system_' . bin2hex(random_bytes(20)), stamp()]);
+    query('INSERT INTO messages (chat_id, user_id, body, nonce, created_at) VALUES (?, ?, ?, ?, ?)', [$room['chat_id'], $uid, 'Call started', 'system_' . bin2hex(random_bytes(20)), stamp()]);
     $id = (int)db()->lastInsertId();
     query('INSERT INTO message_events (message_id, kind, room_id, token) VALUES (?, ?, ?, ?)', [$id, 'call_started', $room['id'], $room['token']]);
     bot_platform_publish_message($id);

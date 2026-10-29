@@ -4,14 +4,14 @@ define('LCHAT_INTERNAL', true);
 require __DIR__ . '/app.php';
 try {
     ensure_features(); $ctx = context(); $user = require_user($ctx);
-    if (!in_array($_SERVER['REQUEST_METHOD'], ['GET', 'HEAD'], true)) fail(405, 'Используйте GET.');
+    if (!in_array($_SERVER['REQUEST_METHOD'], ['GET', 'HEAD'], true)) fail(405, 'Use GET.');
     $file = one('SELECT f.*, m.chat_id, v.duration AS voice_duration FROM message_files f JOIN messages m ON m.id = f.message_id LEFT JOIN message_voice v ON v.message_id = m.id WHERE f.message_id = ?', [(int)($_GET['id'] ?? 0)]);
-    if (!$file) fail(404, 'Файл не найден.');
+    if (!$file) fail(404, 'File not found.');
     if (!service_is_admin($user)) member((int)$file['chat_id'], (int)$user['id']);
     else admin_audit((int)$user['id'], 'file.download', (string)$file['message_id']);
-    if (!preg_match('/^[a-f0-9]{48}\.bin$/D', $file['stored_name'])) fail(404, 'Файл не найден.');
+    if (!preg_match('/^[a-f0-9]{48}\.bin$/D', $file['stored_name'])) fail(404, 'File not found.');
     $path = __DIR__ . '/files/' . $file['stored_name'];
-    if (!is_file($path)) fail(404, 'Файл больше недоступен.');
+    if (!is_file($path)) fail(404, 'File is no longer available.');
     $play = ($_GET['play'] ?? '') === '1' && $file['voice_duration'] !== null;
     $size = (int)filesize($path); $start = 0; $end = $size - 1;
     if ($play && isset($_SERVER['HTTP_RANGE'])) {
@@ -27,4 +27,4 @@ try {
     header('Content-Length: '.($end-$start+1));
     header('Cache-Control: private, no-store');header('X-Content-Type-Options: nosniff');header("Content-Security-Policy: sandbox; default-src 'none'");
     if($_SERVER['REQUEST_METHOD']==='GET'){$stream=fopen($path,'rb');fseek($stream,$start);$left=$end-$start+1;while($left>0&&!feof($stream)){ $chunk=fread($stream,min(65536,$left));if($chunk===false||$chunk==='')break;echo $chunk;$left-=strlen($chunk);}fclose($stream);}
-} catch (Throwable $e) { error_log('LChat download: ' . $e->getMessage()); fail(500, 'Не удалось скачать файл.'); }
+} catch (Throwable $e) { error_log('LChat download: ' . $e->getMessage()); fail(500, 'Could not download the file.'); }

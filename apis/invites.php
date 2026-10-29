@@ -7,20 +7,20 @@ function contacts(int $uid): array {
 function send_invites(int $uid, array $ctx, array $data): array {
     rate('invite-send:' . $uid, 30, 60);
     $kind = field($data, 'kind', 4, 5); $token = field($data, 'token', 48, 48); $nonce = field($data, 'nonce', 16, 40);
-    if (!preg_match('/^[a-zA-Z0-9_-]+$/D', $nonce)) fail(422, 'Некорректный идентификатор приглашения.');
+    if (!preg_match('/^[a-zA-Z0-9_-]+$/D', $nonce)) fail(422, 'Invalid invitation identifier.');
     $ids = $data['user_ids'] ?? null;
-    if (!is_array($ids) || !$ids || count($ids) > 20) fail(422, 'Выберите от 1 до 20 контактов.');
+    if (!is_array($ids) || !$ids || count($ids) > 20) fail(422, 'Choose 1 to 20 contacts.');
     $ids = array_unique(array_map(fn($id) => is_numeric($id) ? (int)$id : 0, $ids));
     if ($kind === 'group') {
         $invite = one('SELECT * FROM chats WHERE kind = ? AND invite_token = ?', ['group', $token]);
-        if (!$invite) fail(404, 'Приглашение недействительно.');
+        if (!$invite) fail(404, 'Invitation is invalid.');
         member((int)$invite['id'], $uid); $title = $invite['title'];
     } elseif ($kind === 'call') { $invite = room($token, $ctx); $title = $invite['title']; }
-    else fail(422, 'Неизвестный тип приглашения.');
+    else fail(422, 'Unknown invitation type.');
     $list = [];
     foreach (contacts($uid) as $contact) $list[(int)$contact['id']] = $contact;
     foreach ($ids as $id) {
-        if (!isset($list[$id])) fail(403, 'Отправить приглашение можно только вашему контакту из личного чата.');
+        if (!isset($list[$id])) fail(403, 'You can invite only a contact from a private chat.');
         if ($kind === 'call' && !$invite['is_public']) member((int)$invite['chat_id'], $id);
     }
     $sent = transaction(function() use ($ids, $list, $uid, $nonce, $kind, $token, $title) {
@@ -30,10 +30,10 @@ function send_invites(int $uid, array $ctx, array $data): array {
             $key = $nonce . '_' . $id;
             $existing = one('SELECT m.id, i.kind, i.token FROM messages m LEFT JOIN message_invites i ON i.message_id = m.id WHERE m.user_id = ? AND m.nonce = ?', [$uid, $key]);
             if ($existing) {
-                if ($existing['kind'] !== $kind || $existing['token'] !== $token) throw new DomainException('Идентификатор приглашения уже использован.');
+                if ($existing['kind'] !== $kind || $existing['token'] !== $token) throw new DomainException('Invitation identifier already used.');
                 $sent[] = $existing['id']; continue;
             }
-            $body = ($kind === 'group' ? 'Приглашение в группу: ' : 'Приглашение в звонок: ') . $title;
+            $body = ($kind === 'group' ? 'Group invitation: ' : 'Call invitation: ') . $title;
             query('INSERT INTO messages (chat_id, user_id, body, nonce, created_at) VALUES (?, ?, ?, ?, ?)', [$list[$id]['chat_id'], $uid, $body, $key, stamp()]);
             $messageId = (int)db()->lastInsertId();
             query('INSERT INTO message_invites (message_id, kind, token, title) VALUES (?, ?, ?, ?)', [$messageId, $kind, $token, $title]);

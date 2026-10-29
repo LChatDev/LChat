@@ -6,7 +6,7 @@ function ensure_features(): void {
     static $ready = false;
     if ($ready) return;
     $version = one('SELECT value FROM settings WHERE name = ?', ['schema_version']);
-    if ((int)($version['value'] ?? 0) < 3) throw new RuntimeException('Сначала установите LChat.');
+    if ((int)($version['value'] ?? 0) < 3) throw new RuntimeException('Install LChat first.');
     if ((int)$version['value'] < 5) {
         $mysql = db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql';
         $id = $mysql ? 'INTEGER PRIMARY KEY AUTO_INCREMENT' : 'INTEGER PRIMARY KEY AUTOINCREMENT';
@@ -114,8 +114,8 @@ function ensure_features(): void {
 }
 function channel_slug(array $data): string {
     $slug = mb_strtolower(field($data, 'slug', 3, 32), 'UTF-8');
-    if (!preg_match('/^[\p{L}][\p{L}\p{N}_]{2,31}$/uD', $slug)) fail(422, 'Адрес канала: 3–32 буквы, цифры и _, начиная с буквы.');
-    if(in_array($slug,['assets','apis','data','files','selfhost','android','reg-ru'],true))fail(422,'Этот адрес зарезервирован системой.');
+    if (!preg_match('/^[\p{L}][\p{L}\p{N}_]{2,31}$/uD', $slug)) fail(422, 'Channel address: 3–32 letters, digits, or underscores, starting with a letter.');
+    if(in_array($slug,['assets','apis','data','files','selfhost','android','reg-ru'],true))fail(422,'This address is reserved by the system.');
     return $slug;
 }
 function service_admin_id(): int {
@@ -141,7 +141,7 @@ function admin_audit(int $actor, string $action, string $target): void {
 }
 function admin_lock(int $uid): void {
     query('UPDATE settings SET value = value WHERE name = ?', ['admin_owner_id']);
-    if (service_admin_id() !== $uid) throw new DomainException('Права администратора уже переданы.');
+    if (service_admin_id() !== $uid) throw new DomainException('Administrator permissions have already been transferred.');
 }
 function moderation_messages(int $chatId, array $data): array {
     $before = max(0, (int)($data['before'] ?? 0));

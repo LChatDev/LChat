@@ -14,8 +14,8 @@
     const response = await fetch('bot-manage.php', options);
     const result = await response.json();
     if (!response.ok) {
-      if (data && retry && response.status === 403 && result.error === 'Обновите страницу и повторите действие.') return request(action, data, false);
-      throw new Error(result.error || 'Не удалось выполнить действие с ботом.');
+      if (data && retry && response.status === 403 && result.error === 'Refresh the page and try again.') return request(action, data, false);
+      throw new Error(result.error || 'Could not complete the bot action.');
     }
     return result;
   }
@@ -26,11 +26,11 @@
   }
   function showToken(title, token) {
     modal(title, body => {
-      body.append(node('p', 'muted', 'Скопируйте токен сейчас. Позже он не показывается; его можно только заменить.'));
-      const input = document.createElement('input'); input.className = 'bot-token'; input.readOnly = true; input.value = token; input.setAttribute('aria-label','Токен бота');
-      body.append(input, button('Скопировать токен','primary wide',async () => {await navigator.clipboard.writeText(token);toast('Токен скопирован');}));
-      body.append(node('p','muted small','Bot API: https://chat.lbs.su/bot<TOKEN>/getMe. Никому не передавайте токен.'));
-      body.append(button('Готово','button subtle wide',openBots));
+      body.append(node('p', 'muted', 'Copy the token now. It will not be shown again; you can only rotate it.'));
+      const input = document.createElement('input'); input.className = 'bot-token'; input.readOnly = true; input.value = token; input.setAttribute('aria-label','Bot token');
+      body.append(input, button('Copy token','primary wide',async () => {await navigator.clipboard.writeText(token);toast('Token copied');}));
+      body.append(node('p','muted small','Bot API: https://chat.lbs.su/bot<TOKEN>/getMe. Do not share your token.'));
+      body.append(button('Done','button subtle wide',openBots));
     });
   }
   async function startChat(bot) {
@@ -42,38 +42,38 @@
   }
   function addDialog(bot) {
     const owned = app.getChats().filter(chat => ['group','channel'].includes(chat.kind) && chat.role === 'owner');
-    modal('Добавить @' + bot.username, body => {
-      if (!owned.length) {body.append(node('p','muted','Сначала создайте группу или канал, владельцем которого будете вы.'));return;}
-      body.append(node('p','muted small','Бот увидит новые сообщения после добавления.'));
+    modal('Add @' + bot.username, body => {
+      if (!owned.length) {body.append(node('p','muted','Create a group or channel that you own first.'));return;}
+      body.append(node('p','muted small','The bot will see new messages after you add it.'));
       const form = document.createElement('form'); form.className = 'bot-add-form';
       const select = document.createElement('select'); select.required = true;
-      for (const chat of owned) {const option = document.createElement('option');option.value = chat.id;option.textContent = (chat.kind === 'channel' ? 'Канал · ' : 'Группа · ') + chat.title;select.append(option);}
-      const submit = document.createElement('button');submit.type = 'submit';submit.className = 'primary wide';submit.textContent = 'Добавить бота';
+      for (const chat of owned) {const option = document.createElement('option');option.value = chat.id;option.textContent = (chat.kind === 'channel' ? 'Channel · ' : 'Group · ') + chat.title;select.append(option);}
+      const submit = document.createElement('button');submit.type = 'submit';submit.className = 'primary wide';submit.textContent = 'Add bot';
       form.append(select, submit);
-      form.onsubmit = async event => {event.preventDefault();submit.disabled=true;try{await request('add',{bot_id:bot.id,chat_id:Number(select.value)});toast('Бот добавлен');await refreshChats();await openBots();}catch(error){report(error);}finally{submit.disabled=false;}};
+      form.onsubmit = async event => {event.preventDefault();submit.disabled=true;try{await request('add',{bot_id:bot.id,chat_id:Number(select.value)});toast('Bot added');await refreshChats();await openBots();}catch(error){report(error);}finally{submit.disabled=false;}};
       body.append(form);
     });
   }
   async function openBots() {
     const data = await request();
-    modal('Мои боты', body => {
-      body.append(node('p','muted small','Создайте бота и получите API-токен через @BotCreator или форму ниже. Боты получают сообщения в личном чате и группах.'));
-      if (data.creator_id) body.append(button('Написать @BotCreator','primary wide',async()=>{await startChat({id:data.creator_id});const input=byId('message-input');if(input){input.value='/start';input.focus();}}));
-      body.append(button('Документация Bot API','button subtle wide',()=>{window.location.href='docs.php';}));
+    modal('My bots', body => {
+      body.append(node('p','muted small','Create a bot and get an API token through @BotCreator or the form below. Bots receive messages in private chats and groups.'));
+      if (data.creator_id) body.append(button('Message @BotCreator','primary wide',async()=>{await startChat({id:data.creator_id});const input=byId('message-input');if(input){input.value='/start';input.focus();}}));
+      body.append(button('Bot API documentation','button subtle wide',()=>{window.location.href='docs.php';}));
       for (const bot of data.bots) {
         const card = node('div','bot-card');
         const heading = node('div','bot-card-heading');heading.append(avatar(bot.name,bot.id),node('div','',bot.name+' · @'+bot.username));card.append(heading);
         const actions = node('div','bot-card-actions');
-        actions.append(button('Открыть чат','button subtle',()=>startChat(bot)),button('Добавить в группу','button subtle',()=>addDialog(bot)),button('Новый токен','button subtle',async()=>{if(!confirm('Старый токен сразу перестанет работать. Заменить его?'))return;const changed=await request('rotate',{bot_id:bot.id});showToken('Новый токен @'+bot.username,changed.token);}));
+        actions.append(button('Open chat','button subtle',()=>startChat(bot)),button('Add to group','button subtle',()=>addDialog(bot)),button('New token','button subtle',async()=>{if(!confirm('The old token will stop working immediately. Replace it?'))return;const changed=await request('rotate',{bot_id:bot.id});showToken('New token @'+bot.username,changed.token);}));
         card.append(actions);body.append(card);
       }
-      if (!data.bots.length) body.append(node('p','muted','Вы ещё не создали ботов.'));
+      if (!data.bots.length) body.append(node('p','muted','You have not created any bots yet.'));
       const form = document.createElement('form');form.className='bot-create-form';
-      const [nameLabel,name] = inputLabel('Имя бота',2,60,'Например, Помощник');
-      const [userLabel,username] = inputLabel('Логин бота',6,32,'Например, helperbot');
-      const submit = document.createElement('button');submit.type='submit';submit.className='primary wide';submit.textContent='Создать бота';
-      form.append(nameLabel,userLabel,node('p','muted small','Логин должен заканчиваться на bot.'),submit);
-      form.onsubmit=async event=>{event.preventDefault();submit.disabled=true;try{const created=await request('create',{name:name.value,username:username.value});showToken('Токен @'+created.username,created.token);}catch(error){report(error);}finally{submit.disabled=false;}};
+      const [nameLabel,name] = inputLabel('Bot name',2,60,'For example, Assistant');
+      const [userLabel,username] = inputLabel('Bot username',6,32,'For example, helperbot');
+      const submit = document.createElement('button');submit.type='submit';submit.className='primary wide';submit.textContent='Create bot';
+      form.append(nameLabel,userLabel,node('p','muted small','Username must end in bot.'),submit);
+      form.onsubmit=async event=>{event.preventDefault();submit.disabled=true;try{const created=await request('create',{name:name.value,username:username.value});showToken('Token @'+created.username,created.token);}catch(error){report(error);}finally{submit.disabled=false;}};
       body.append(form);
     });
   }

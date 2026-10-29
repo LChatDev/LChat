@@ -1,18 +1,43 @@
 # LChat
-Fully AI generated product
-# Setup
-Open config.php then paste your MySQL DB name (  'dsn' => 'mysql:host=localhost;port=3306;dbname=(DBNAMEHERE);charset=utf8mb4',) Example: dbname=MyDB;
 
+LChat is a self-hosted PHP messenger with private chats, groups, channels, file and voice messages, voice/video calls, and a Bot API. This repository contains the English web version for Apache hosting, including REG.RU shared hosting.
 
-'username' => 'DBUSERHERE', Remove DBUSERHERE and paste your MySQL DataBase user \\\ Example: root
-'password' => 'DBPASSHERE', Remove DBPASSHERE and paste your MySQL DataBase user password \\\ Example: MyUnhackablePassword
+## Requirements
 
+- PHP 8.2 or newer with `pdo_mysql`, `mbstring`, `fileinfo`, `curl`, and `gd` (for profile photos)
+- MySQL or MariaDB
+- Apache with `mod_rewrite`
+- HTTPS for browser calls, voice recording, and service workers
+- An optional TURN server for calls across networks
 
-'install_key' => '30RANDOMSYMBOLS', Remove 30RANDOMSYMBOLS and paste 30 random symbols \\\ Example: qFxUsCge2sn9jUpQ8Sdue0GqzrxNs8
-Then go to your site at adress /install.php. Enter your 30 random symbols and press 'Create tables'
+## Installation
 
+1. Upload the project files into one site directory, with `index.php` at its root. Keep the included `.htaccess` files.
+2. Create a MySQL database and user. Copy `config.example.php` to a private `config.php` in the site directory and set its database connection, site URL, session settings, and a random installation key. **Never commit or publish `config.php`.** The existing local config is intentionally left unchanged.
+3. Open `https://your-domain/install.php?key=YOUR_INSTALL_KEY` to create or update tables. Remove `install.php` from the public server and clear the installation key after setup.
+4. Ensure `data/` and `files/` are writable by PHP. Their contents are private and are not part of the GitHub source.
+5. Open `index.php` and register the first account. Configure HTTPS and TURN before testing calls with users on different networks.
 
-Go to your messenger and create first user!
-With user ID: 1 you can get owner status. Just open /admin.php
-# WARNING!!
-Your host MUST SUPPORT PHP!!
+The web app checks browser cookies and PHP sessions during login. If a login returns to the sign-in page, verify the configured session domain, HTTPS/proxy settings, and PHP session storage. Browser calls require a secure context even when the site itself is accessible over HTTP.
+
+## Features
+
+- Private chats, groups, channel links, invitations, contacts, and presence
+- Text, file, photo, voice messages, reactions, replies, edits, and deletion
+- Group calls, private calls, and call links with browser WebRTC
+- Multiple-tab call status and an incoming call interface
+- Profile photos, themes, notification sounds, and microphone switching
+- Admin panel at `admin.php` for authorized administrators
+- Bot creation through `@BotCreator`, polling and webhooks, inline buttons, and reply keyboards
+
+## Bot API
+
+Open `docs.php` on the site or read [BOT_API.md](BOT_API.md). Create a bot by messaging `@BotCreator` with `/newbot`, then pass its token using `Authorization: Bearer YOUR_TOKEN` when calling `bot-api.php?method=getMe`. Store bot tokens on your own server, never in browser code or a public repository.
+
+## Updating
+
+Back up your private `config.php`, `data/`, and `files/` before replacing the site files. Keep the private config and uploaded data when deploying a new version. Run the protected installer again if the update adds database tables or columns, then remove it from the public server. Clear the browser cache or refresh the service worker if the interface still shows an older version.
+
+## Source and secrets
+
+The repository ignores `config.php`, local auth configuration, runtime data, and uploaded files. Do not manually upload those files to GitHub. If a secret was exposed, replace it in the service where it is used.

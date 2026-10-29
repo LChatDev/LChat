@@ -27,42 +27,42 @@ function bot_platform_message(int $messageId): ?array {
 function bot_platform_markup(mixed $input): ?string {
     if ($input === null || $input === '') return null;
     if (is_string($input)) $input = json_decode($input, true);
-    if (!is_array($input)) throw new DomainException('Некорректная клавиатура.');
+    if (!is_array($input)) throw new DomainException('Invalid keyboard.');
     if (array_key_exists('remove_keyboard', $input)) {
-        if ($input['remove_keyboard'] !== true && $input['remove_keyboard'] !== 1) throw new DomainException('remove_keyboard должен быть true.');
+        if ($input['remove_keyboard'] !== true && $input['remove_keyboard'] !== 1) throw new DomainException('remove_keyboard must be true.');
         return '{"remove_keyboard":true}';
     }
     $reply = array_key_exists('keyboard', $input);
     $field = $reply ? 'keyboard' : 'inline_keyboard';
-    if (!isset($input[$field]) || !is_array($input[$field]) || count($input[$field]) > 8) throw new DomainException('Некорректная клавиатура.');
+    if (!isset($input[$field]) || !is_array($input[$field]) || count($input[$field]) > 8) throw new DomainException('Invalid keyboard.');
     $keyboard = []; $total = 0;
     foreach ($input[$field] as $row) {
-        if (!is_array($row) || count($row) < 1 || count($row) > 8) throw new DomainException('В строке клавиатуры должно быть от 1 до 8 кнопок.');
+        if (!is_array($row) || count($row) < 1 || count($row) > 8) throw new DomainException('A keyboard row must contain 1 to 8 buttons.');
         $buttons = [];
         foreach ($row as $button) {
-            if (++$total > 32 || !is_array($button) || !is_string($button['text'] ?? null) || mb_strlen(trim($button['text']), 'UTF-8') < 1 || mb_strlen($button['text'], 'UTF-8') > 64) throw new DomainException('Некорректная кнопка клавиатуры.');
+            if (++$total > 32 || !is_array($button) || !is_string($button['text'] ?? null) || mb_strlen(trim($button['text']), 'UTF-8') < 1 || mb_strlen($button['text'], 'UTF-8') > 64) throw new DomainException('Invalid keyboard button.');
             if ($reply) {
-                if (count($button) !== 1) throw new DomainException('Обычная клавиатура поддерживает только текстовые кнопки.');
+                if (count($button) !== 1) throw new DomainException('Reply keyboards support text buttons only.');
                 $buttons[] = ['text' => trim($button['text'])];
                 continue;
             }
             $hasData = isset($button['callback_data']); $hasUrl = isset($button['url']);
-            if ($hasData === $hasUrl) throw new DomainException('Кнопке нужен callback_data или URL.');
+            if ($hasData === $hasUrl) throw new DomainException('A button needs callback_data or a URL.');
             if ($hasData) {
-                if (!is_string($button['callback_data']) || strlen($button['callback_data']) < 1 || strlen($button['callback_data']) > 64) throw new DomainException('callback_data: от 1 до 64 байт.');
+                if (!is_string($button['callback_data']) || strlen($button['callback_data']) < 1 || strlen($button['callback_data']) > 64) throw new DomainException('callback_data: 1 to 64 bytes.');
                 $buttons[] = ['text' => trim($button['text']), 'callback_data' => $button['callback_data']];
             } else {
-                if (!is_string($button['url']) || !filter_var($button['url'], FILTER_VALIDATE_URL) || parse_url($button['url'], PHP_URL_SCHEME) !== 'https') throw new DomainException('URL кнопки должен использовать HTTPS.');
+                if (!is_string($button['url']) || !filter_var($button['url'], FILTER_VALIDATE_URL) || parse_url($button['url'], PHP_URL_SCHEME) !== 'https') throw new DomainException('Button URL must use HTTPS.');
                 $buttons[] = ['text' => trim($button['text']), 'url' => $button['url']];
             }
         }
         $keyboard[] = $buttons;
     }
     if ($reply) {
-        if (!$keyboard) throw new DomainException('Клавиатура должна содержать кнопки.');
+        if (!$keyboard) throw new DomainException('Keyboard must contain buttons.');
         $placeholder = $input['input_field_placeholder'] ?? '';
-        if (!is_string($placeholder) || mb_strlen($placeholder, 'UTF-8') > 64) throw new DomainException('Подсказка клавиатуры — не более 64 символов.');
-        foreach (['resize_keyboard', 'one_time_keyboard', 'is_persistent'] as $option) if (isset($input[$option]) && !is_bool($input[$option])) throw new DomainException($option . ' должен быть true или false.');
+        if (!is_string($placeholder) || mb_strlen($placeholder, 'UTF-8') > 64) throw new DomainException('Keyboard placeholder must be at most 64 characters.');
+        foreach (['resize_keyboard', 'one_time_keyboard', 'is_persistent'] as $option) if (isset($input[$option]) && !is_bool($input[$option])) throw new DomainException($option . ' must be true or false.');
         return json_encode(['keyboard' => $keyboard, 'resize_keyboard' => $input['resize_keyboard'] ?? false, 'one_time_keyboard' => $input['one_time_keyboard'] ?? false, 'is_persistent' => $input['is_persistent'] ?? false, 'input_field_placeholder' => trim($placeholder)], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     }
     return json_encode(['inline_keyboard' => $keyboard], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
@@ -70,7 +70,7 @@ function bot_platform_markup(mixed $input): ?string {
 
 function bot_platform_save_markup(int $messageId, ?string $markup): void {
     $message = one('SELECT chat_id, user_id FROM messages WHERE id = ?', [$messageId]);
-    if (!$message) throw new DomainException('Сообщение для клавиатуры не найдено.');
+    if (!$message) throw new DomainException('Keyboard message not found.');
     query('DELETE FROM bot_chat_keyboards WHERE message_id = ?', [$messageId]);
     query('DELETE FROM bot_message_markup WHERE message_id = ?', [$messageId]);
     if ($markup === null || $markup === '{"inline_keyboard":[]}') return;
@@ -129,18 +129,18 @@ function bot_platform_publish_callback(int $botId, string $callbackId): void {
 }
 
 function bot_platform_webhook_target(string $url): array {
-    if (strlen($url) > 2048 || !filter_var($url, FILTER_VALIDATE_URL)) throw new DomainException('Укажите корректный HTTPS-адрес вебхука.');
+    if (strlen($url) > 2048 || !filter_var($url, FILTER_VALIDATE_URL)) throw new DomainException('Enter a valid HTTPS webhook URL.');
     $parts = parse_url($url);
     $host = strtolower((string)($parts['host'] ?? ''));
     $port = (int)($parts['port'] ?? 443);
-    if (($parts['scheme'] ?? '') !== 'https' || !in_array($port, [443, 8443], true) || isset($parts['user']) || isset($parts['pass']) || isset($parts['fragment']) || !preg_match('/^[a-z0-9.-]{4,253}$/D', $host) || !str_contains($host, '.') || filter_var($host, FILTER_VALIDATE_IP)) throw new DomainException('Вебхук должен быть публичным HTTPS-доменом на порту 443 или 8443.');
+    if (($parts['scheme'] ?? '') !== 'https' || !in_array($port, [443, 8443], true) || isset($parts['user']) || isset($parts['pass']) || isset($parts['fragment']) || !preg_match('/^[a-z0-9.-]{4,253}$/D', $host) || !str_contains($host, '.') || filter_var($host, FILTER_VALIDATE_IP)) throw new DomainException('Webhook must use a public HTTPS domain on port 443 or 8443.');
     $records = dns_get_record($host, DNS_A);
-    if (!is_array($records)) throw new DomainException('Не удалось проверить DNS вебхука.');
+    if (!is_array($records)) throw new DomainException('Could not check the webhook DNS.');
     foreach ($records as $record) {
         $ip = $record['ip'] ?? '';
         if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) return [$host, $port, $ip];
     }
-    throw new DomainException('Домен вебхука должен иметь публичный IPv4-адрес.');
+    throw new DomainException('Webhook domain must have a public IPv4 address.');
 }
 
 function bot_platform_schedule_dispatch(): void {

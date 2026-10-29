@@ -37,26 +37,26 @@
     try {
       const response = await fetch('settings.php', {credentials:'same-origin', cache:'no-store'});
       data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Не удалось загрузить настройки.');
+      if (!response.ok) throw new Error(data.error || 'Could not load settings.');
     } catch (error) { report(error); return; }
-    modal('Настройки', body => {
+    modal('Settings', body => {
       const form = document.createElement('form'); form.className = 'settings-form';
-      const nameLabel = document.createElement('label'); nameLabel.textContent = 'Имя';
+      const nameLabel = document.createElement('label'); nameLabel.textContent = 'Name';
       const name = document.createElement('input'); name.name='name'; name.required=true; name.minLength=2; name.maxLength=60; name.value=escapeText(data.profile.name); nameLabel.append(name);
-      const bioLabel = document.createElement('label'); bioLabel.textContent='О себе';
-      const bio = document.createElement('textarea'); bio.name='bio'; bio.rows=3; bio.maxLength=240; bio.placeholder='Пара слов о себе'; bio.value=escapeText(data.settings.bio); bioLabel.append(bio);
-      const themeLabel = document.createElement('label'); themeLabel.textContent='Тема';
+      const bioLabel = document.createElement('label'); bioLabel.textContent='Bio';
+      const bio = document.createElement('textarea'); bio.name='bio'; bio.rows=3; bio.maxLength=240; bio.placeholder='A few words about yourself'; bio.value=escapeText(data.settings.bio); bioLabel.append(bio);
+      const themeLabel = document.createElement('label'); themeLabel.textContent='Theme';
       const theme = document.createElement('select'); theme.name='theme';
-      for (const [value,label] of [['dark','Тёмная'],['light','Светлая']]) {const option=document.createElement('option');option.value=value;option.textContent=label;theme.append(option);} theme.value=data.settings.theme || 'dark'; themeLabel.append(theme);
-      const paletteLabel = document.createElement('div'); paletteLabel.className='settings-label'; paletteLabel.textContent='Цвет акцента';
-      const palette = document.createElement('div'); palette.className='settings-palette'; palette.setAttribute('role','radiogroup'); palette.setAttribute('aria-label','Цвет акцента');
+      for (const [value,label] of [['dark','Dark'],['light','Light']]) {const option=document.createElement('option');option.value=value;option.textContent=label;theme.append(option);} theme.value=data.settings.theme || 'dark'; themeLabel.append(theme);
+      const paletteLabel = document.createElement('div'); paletteLabel.className='settings-label'; paletteLabel.textContent='Accent color';
+      const palette = document.createElement('div'); palette.className='settings-palette'; palette.setAttribute('role','radiogroup'); palette.setAttribute('aria-label','Accent color');
       let chosen = Number(data.settings.accent) || 0;
-      colors.forEach((color,index) => {const swatch=document.createElement('button');swatch.type='button';swatch.className='settings-swatch';swatch.style.background=color;swatch.title='Цвет '+(index+1);swatch.setAttribute('role','radio');swatch.setAttribute('aria-checked',String(index===chosen));swatch.onclick=()=>{chosen=index;palette.querySelectorAll('[role=radio]').forEach((item,i)=>item.setAttribute('aria-checked',String(i===index)));};palette.append(swatch);});
-      const compactLabel=document.createElement('label');compactLabel.className='settings-check';const compact=document.createElement('input');compact.type='checkbox';compact.checked=Boolean(Number(data.settings.compact));compactLabel.append(compact,document.createTextNode(' Компактный список чатов'));
+      colors.forEach((color,index) => {const swatch=document.createElement('button');swatch.type='button';swatch.className='settings-swatch';swatch.style.background=color;swatch.title='Color '+(index+1);swatch.setAttribute('role','radio');swatch.setAttribute('aria-checked',String(index===chosen));swatch.onclick=()=>{chosen=index;palette.querySelectorAll('[role=radio]').forEach((item,i)=>item.setAttribute('aria-checked',String(i===index)));};palette.append(swatch);});
+      const compactLabel=document.createElement('label');compactLabel.className='settings-check';const compact=document.createElement('input');compact.type='checkbox';compact.checked=Boolean(Number(data.settings.compact));compactLabel.append(compact,document.createTextNode(' Compact chat list'));
       const error=document.createElement('p');error.className='form-error';error.hidden=true;error.setAttribute('role','alert');
-      const save=document.createElement('button');save.type='submit';save.className='primary wide';save.textContent='Сохранить настройки';
+      const save=document.createElement('button');save.type='submit';save.className='primary wide';save.textContent='Save settings';
       form.append(nameLabel,bioLabel,themeLabel,paletteLabel,palette,compactLabel,error,save);
-      form.onsubmit=async event=>{event.preventDefault();save.disabled=true;error.hidden=true;try{const before=await api('me');const response=await fetch('settings.php',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','X-CSRF-Token':before.csrf},body:JSON.stringify({name:name.value,bio:bio.value,theme:theme.value,accent:chosen,compact:compact.checked})});const result=await response.json();if(!response.ok)throw new Error(result.error||'Не удалось сохранить настройки.');const value={bio:bio.value,theme:theme.value,accent:chosen,compact:compact.checked?1:0};apply(value);localStorage.setItem('lchat-appearance',JSON.stringify(value));const user=app.getUser();if(user)user.name=name.value.trim();const avatar=document.getElementById('profile-button');avatar.title=user?.name||name.value.trim();avatar.firstChild && avatar.firstChild.nodeType===3 && (avatar.firstChild.textContent=(user?.name||name.value.trim()).slice(0,1).toUpperCase());document.getElementById('modal').close();toast('Настройки сохранены');}catch(e){error.textContent=e.message||'Не удалось сохранить настройки.';error.hidden=false;}finally{save.disabled=false;}};
+      form.onsubmit=async event=>{event.preventDefault();save.disabled=true;error.hidden=true;try{const before=await api('me');const response=await fetch('settings.php',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','X-CSRF-Token':before.csrf},body:JSON.stringify({name:name.value,bio:bio.value,theme:theme.value,accent:chosen,compact:compact.checked})});const result=await response.json();if(!response.ok)throw new Error(result.error||'Could not save settings.');const value={bio:bio.value,theme:theme.value,accent:chosen,compact:compact.checked?1:0};apply(value);localStorage.setItem('lchat-appearance',JSON.stringify(value));const user=app.getUser();if(user)user.name=name.value.trim();const avatar=document.getElementById('profile-button');avatar.title=user?.name||name.value.trim();avatar.firstChild && avatar.firstChild.nodeType===3 && (avatar.firstChild.textContent=(user?.name||name.value.trim()).slice(0,1).toUpperCase());document.getElementById('modal').close();toast('Settings saved');}catch(e){error.textContent=e.message||'Could not save settings.';error.hidden=false;}finally{save.disabled=false;}};
       body.append(form);
     });
   });

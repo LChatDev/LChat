@@ -5,12 +5,12 @@ if (!defined('LCHAT_INTERNAL')) { http_response_code(404); exit; }
 function moderation_action(string $action, array $data, array $user): void {
     if ($action === 'ban') {
         $target = (int)($data['user_id'] ?? 0);
-        if (!is_bool($data['blocked'] ?? null)) fail(422, 'Укажите состояние блокировки.');
-        if (!one('SELECT id FROM users WHERE id = ?', [$target])) fail(404, 'Пользователь не найден.');
-        $reason = field(['reason' => $data['reason'] ?? 'Нарушение правил'], 'reason', 1, 200);
+        if (!is_bool($data['blocked'] ?? null)) fail(422, 'Specify the ban status.');
+        if (!one('SELECT id FROM users WHERE id = ?', [$target])) fail(404, 'User not found.');
+        $reason = field(['reason' => $data['reason'] ?? 'Rules violation'], 'reason', 1, 200);
         transaction(function() use ($target, $reason, $data, $user) {
             admin_lock((int)$user['id']);
-            if ($target === service_admin_id()) throw new DomainException('Нельзя заблокировать администратора.');
+            if ($target === service_admin_id()) throw new DomainException('You cannot ban an administrator.');
             query('DELETE FROM user_bans WHERE user_id = ?', [$target]);
             if ($data['blocked']) {
                 query('INSERT INTO user_bans (user_id, reason, created_by, created_at) VALUES (?, ?, ?, ?)', [$target, $reason, $user['id'], stamp()]);
@@ -23,21 +23,21 @@ function moderation_action(string $action, array $data, array $user): void {
         rate('admin-transfer:' . $user['id'], 10, 3600);
         $username = strtolower(ltrim(field($data, 'username', 3, 33), '@'));
         $target = one('SELECT id, username FROM users WHERE username = ?', [$username]);
-        if (!$target || (int)$target['id'] === (int)$user['id'] || service_ban((int)$target['id'])) fail(422, 'Выберите другой существующий незаблокированный аккаунт.');
+        if (!$target || (int)$target['id'] === (int)$user['id'] || service_ban((int)$target['id'])) fail(422, 'Choose another existing unbanned account.');
         $password = $data['password'] ?? '';
         $hash = one('SELECT password_hash FROM users WHERE id = ?', [$user['id']])['password_hash'];
-        if (!is_string($password) || strlen($password) > 72 || !password_verify($password, $hash)) fail(403, 'Неверный пароль текущего администратора.');
-        if (($data['confirm'] ?? '') !== $target['username']) fail(422, 'Подтвердите передачу прав.');
+        if (!is_string($password) || strlen($password) > 72 || !password_verify($password, $hash)) fail(403, 'Incorrect current administrator password.');
+        if (($data['confirm'] ?? '') !== $target['username']) fail(422, 'Confirm the ownership transfer.');
         transaction(function() use ($target, $user) {
             admin_lock((int)$user['id']);
-            if (service_ban((int)$target['id'])) throw new DomainException('Аккаунт заблокирован.');
+            if (service_ban((int)$target['id'])) throw new DomainException('Account banned.');
             query('UPDATE settings SET value = ? WHERE name = ?', [(string)$target['id'], 'admin_owner_id']);
             admin_audit((int)$user['id'], 'admin.transfer', (string)$target['id']);
         }); result(['ok' => true]);
     }
     if ($action === 'chats') {
         $search = $data['q'] ?? '';
-        if (!is_string($search) || mb_strlen($search) > 60) fail(422, 'Поиск: до 60 символов.');
+        if (!is_string($search) || mb_strlen($search) > 60) fail(422, 'Search: up to 60 characters.');
         $pattern = '%' . str_replace(['!','%','_'], ['!!','!%','!_'], trim($search)) . '%';
         $after = max(0, (int)($data['after'] ?? 0));
         $rows = query("SELECT c.id, c.title, c.kind, c.created_at, (SELECT GROUP_CONCAT(u.username) FROM users u JOIN members m ON m.user_id = u.id WHERE m.chat_id = c.id) AS people FROM chats c WHERE c.id > ? AND (c.title LIKE ? ESCAPE '!' OR EXISTS (SELECT 1 FROM users u JOIN members m ON m.user_id = u.id WHERE m.chat_id = c.id AND u.username LIKE ? ESCAPE '!')) ORDER BY c.id LIMIT 51", [$after, $pattern, $pattern])->fetchAll();
@@ -47,19 +47,19 @@ function moderation_action(string $action, array $data, array $user): void {
     if ($action === 'chat.messages') {
         $chatId = (int)($data['chat_id'] ?? 0);
         $chat = one('SELECT id, kind, title FROM chats WHERE id = ?', [$chatId]);
-        if (!$chat) fail(404, 'Чат не найден.');
+        if (!$chat) fail(404, 'Chat not found.');
         admin_audit((int)$user['id'], 'chat.view', (string)$chatId);
         result(['chat' => $chat] + moderation_messages($chatId, $data));
     }
     if ($action === 'chat.send') {
         $chatId = (int)($data['chat_id'] ?? 0);
-        if (!one('SELECT id FROM chats WHERE id = ?', [$chatId])) fail(404, 'Чат не найден.');
+        if (!one('SELECT id FROM chats WHERE id = ?', [$chatId])) fail(404, 'Chat not found.');
         $body = field($data, 'body', 1, 4000); $nonce = field($data, 'nonce', 16, 64);
-        if (!preg_match('/^[a-zA-Z0-9_-]+$/D', $nonce)) fail(422, 'Некорректный идентификатор сообщения.');
+        if (!preg_match('/^[a-zA-Z0-9_-]+$/D', $nonce)) fail(422, 'Invalid message identifier.');
         $sentMessageId = transaction(function() use ($chatId, $body, $nonce, $user): int {
             admin_lock((int)$user['id']);
             $existing = one('SELECT id, chat_id FROM messages WHERE user_id = ? AND nonce = ?', [$user['id'], $nonce]);
-            if ($existing) { if ((int)$existing['chat_id'] !== $chatId) throw new DomainException('Идентификатор уже использован.'); return (int)$existing['id']; }
+            if ($existing) { if ((int)$existing['chat_id'] !== $chatId) throw new DomainException('Identifier already used.'); return (int)$existing['id']; }
             query('INSERT INTO messages (chat_id, user_id, body, nonce, created_at) VALUES (?, ?, ?, ?, ?)', [$chatId, $user['id'], $body, $nonce, stamp()]);
             $messageId = (int)db()->lastInsertId();
             query('INSERT INTO moderator_messages (message_id) VALUES (?)', [$messageId]);

@@ -20,17 +20,17 @@ function bot_request_token(): string {
 function bot_account_create(int $ownerId, string $name, string $username): array {
     $name = trim($name);
     $username = strtolower(trim(ltrim($username, '@')));
-    if (mb_strlen($name, 'UTF-8') < 2 || mb_strlen($name, 'UTF-8') > 60) throw new DomainException('Имя бота: от 2 до 60 символов.');
-    if (!preg_match('/^[a-z][a-z0-9_]{2,28}bot$/D', $username)) throw new DomainException('Логин должен начинаться с буквы и заканчиваться на bot; разрешены латинские буквы, цифры и _.');
+    if (mb_strlen($name, 'UTF-8') < 2 || mb_strlen($name, 'UTF-8') > 60) throw new DomainException('Bot name: 2 to 60 characters.');
+    if (!preg_match('/^[a-z][a-z0-9_]{2,28}bot$/D', $username)) throw new DomainException('Username must start with a letter and end in bot; Latin letters, digits, and underscores are allowed.');
     $create = static function () use ($ownerId, $name, $username): array {
         query('UPDATE users SET name = name WHERE id = ?', [$ownerId]);
         $count = one('SELECT COUNT(*) AS n FROM bot_accounts WHERE owner_user_id = ?', [$ownerId]);
-        if ((int)$count['n'] >= 10) throw new DomainException('Можно создать не больше 10 ботов.');
+        if ((int)$count['n'] >= 10) throw new DomainException('You can create up to 10 bots.');
         try {
             $email = 'bot-' . bin2hex(random_bytes(12)) . '@lchat.invalid';
             query('INSERT INTO users (username, email, name, password_hash, created_at, last_seen) VALUES (?, ?, ?, ?, ?, ?)', [$username, $email, $name, password_hash(bin2hex(random_bytes(32)), PASSWORD_DEFAULT), stamp(), stamp()]);
         } catch (PDOException $e) {
-            if (str_starts_with((string)$e->getCode(), '23')) throw new DomainException('Этот логин уже занят.', 0, $e);
+            if (str_starts_with((string)$e->getCode(), '23')) throw new DomainException('This username is taken.', 0, $e);
             throw $e;
         }
         $id = (int)db()->lastInsertId();
@@ -42,7 +42,7 @@ function bot_account_create(int $ownerId, string $name, string $username): array
 }
 
 function bot_account_rotate(int $ownerId, int $botId): string {
-    if ($botId < 1 || !one('SELECT bot_user_id FROM bot_accounts WHERE bot_user_id = ? AND owner_user_id = ?', [$botId, $ownerId])) throw new DomainException('Бот не найден.');
+    if ($botId < 1 || !one('SELECT bot_user_id FROM bot_accounts WHERE bot_user_id = ? AND owner_user_id = ?', [$botId, $ownerId])) throw new DomainException('Bot not found.');
     $token = $botId . ':' . bin2hex(random_bytes(24));
     query('UPDATE bot_accounts SET token_hash = ? WHERE bot_user_id = ? AND owner_user_id = ?', [hash('sha256', $token), $botId, $ownerId]);
     return $token;

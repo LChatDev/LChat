@@ -14,13 +14,13 @@ try {
         $bots = query('SELECT b.bot_user_id AS id, u.username, u.name, b.created_at FROM bot_accounts b JOIN users u ON u.id = b.bot_user_id WHERE b.owner_user_id = ? ORDER BY b.bot_user_id DESC', [$uid])->fetchAll();
         result(['bots' => $bots, 'creator_id' => bot_creator_id()]);
     }
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') fail(405, 'Используйте GET или POST.');
-    if (!hash_equals($ctx['csrf'], $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '')) fail(403, 'Обновите страницу и повторите действие.');
-    if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 8192) fail(413, 'Слишком большой запрос.');
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') fail(405, 'Use GET or POST.');
+    if (!hash_equals($ctx['csrf'], $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '')) fail(403, 'Refresh the page and try again.');
+    if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 8192) fail(413, 'Request too large.');
     $raw = file_get_contents('php://input', false, null, 0, 8193);
-    if ($raw === false || strlen($raw) > 8192) fail(413, 'Слишком большой запрос.');
+    if ($raw === false || strlen($raw) > 8192) fail(413, 'Request too large.');
     $data = json_decode($raw, true);
-    if (!is_array($data)) fail(400, 'Ожидается JSON.');
+    if (!is_array($data)) fail(400, 'Expected JSON.');
     $action = (string)($data['action'] ?? '');
     if ($action === 'create') {
         rate('bot-create:' . $uid, 10, 86400);
@@ -30,7 +30,7 @@ try {
     }
     $botId = (int)($data['bot_id'] ?? 0);
     $bot = $botId > 0 ? one('SELECT bot_user_id FROM bot_accounts WHERE bot_user_id = ? AND owner_user_id = ?', [$botId, $uid]) : null;
-    if (!$bot) fail(404, 'Бот не найден.');
+    if (!$bot) fail(404, 'Bot not found.');
     if ($action === 'rotate') {
         rate('bot-rotate:' . $uid, 20, 86400);
         result(['token' => bot_account_rotate($uid, $botId)]);
@@ -39,7 +39,7 @@ try {
         rate('bot-add:' . $uid, 40, 600);
         $chatId = (int)($data['chat_id'] ?? 0);
         $chat = $chatId > 0 ? one('SELECT c.kind, m.role FROM chats c JOIN members m ON m.chat_id = c.id WHERE c.id = ? AND m.user_id = ?', [$chatId, $uid]) : null;
-        if (!$chat || !in_array($chat['kind'], ['group', 'channel'], true) || $chat['role'] !== 'owner') fail(403, 'Добавить бота может владелец группы или канала.');
+        if (!$chat || !in_array($chat['kind'], ['group', 'channel'], true) || $chat['role'] !== 'owner') fail(403, 'Only the group or channel owner can add a bot.');
         try {
             query('INSERT INTO members (chat_id, user_id, role, joined_at) VALUES (?, ?, ?, ?)', [$chatId, $botId, $chat['kind'] === 'channel' ? 'admin' : 'member', stamp()]);
         } catch (PDOException $e) {
@@ -47,10 +47,10 @@ try {
         }
         result(['ok' => true]);
     }
-    fail(404, 'Действие не найдено.');
+    fail(404, 'Action not found.');
 } catch (DomainException $e) {
     fail(422, $e->getMessage());
 } catch (Throwable $e) {
     error_log('LChat bot manage: ' . get_class($e) . ' ' . $e->getMessage());
-    fail(500, 'Не удалось выполнить действие с ботом.');
+    fail(500, 'Could not complete the bot action.');
 }
