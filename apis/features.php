@@ -121,7 +121,9 @@ function channel_slug(array $data): string {
 function service_admin_id(): int {
     $setting = one('SELECT value FROM settings WHERE name = ?', ['admin_owner_id']);
     if (!$setting) {
-        $initial = one('SELECT id FROM users WHERE username = ?', ['leosmleol']);
+        $initialName = strtolower((string)(config()['initial_admin_username'] ?? 'leosmleol'));
+        if (!preg_match('/^[a-z0-9_]{3,32}$/D', $initialName)) return 0;
+        $initial = one('SELECT id FROM users WHERE username = ?', [$initialName]);
         if (!$initial) return 0;
         if (db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql') query('INSERT IGNORE INTO settings (name, value) VALUES (?, ?)', ['admin_owner_id', (string)$initial['id']]);
         else query('INSERT OR IGNORE INTO settings (name, value) VALUES (?, ?)', ['admin_owner_id', (string)$initial['id']]);

@@ -11,6 +11,8 @@ return [
     'install_key' => 'REPLACE_WITH_A_LONG_RANDOM_SECRET',
     // Public name shown in the web interface. Existing installations default to LChat.
     'site_name' => 'LChat',
+    // The registered user who becomes owner on a fresh installation.
+    'initial_admin_username' => 'leosmleol',
     'registration_open' => true,
     'session_name' => 'lchat_session',
     'session_domain' => '',
