@@ -1,12 +1,12 @@
 """Isolated HTTP/SQLite settings test. Pass path to PHP and its extension directory."""
-import os, pathlib, socket, subprocess, sys, tempfile, time
+import base64, hashlib, hmac, os, pathlib, socket, subprocess, sys, tempfile, time
 import requests
 
 php, extensions = sys.argv[1:3]
 root = pathlib.Path(__file__).resolve().parent.parent
 with tempfile.TemporaryDirectory(prefix='lchat-settings-') as directory:
     temp = pathlib.Path(directory)
-    (temp/'config.php').write_text("<?php return ['database'=>['dsn'=>'sqlite:" + (temp/'test.sqlite').as_posix() + "'], 'install_key'=>'" + 'x'*40 + "', 'site_name'=>'From config', 'registration_open'=>true, 'max_call_participants'=>8, 'turn'=>['urls'=>'','secret'=>'','ttl'=>3600]];", encoding='utf-8')
+    (temp/'config.php').write_text("<?php return ['database'=>['dsn'=>'sqlite:" + (temp/'test.sqlite').as_posix() + "'], 'install_key'=>'" + 'x'*40 + "', 'site_name'=>'From config', 'initial_admin_username'=>'customowner', 'registration_open'=>true, 'max_call_participants'=>8, 'turn'=>['urls'=>'','secret'=>'','ttl'=>3600]];", encoding='utf-8')
     with socket.socket() as sock:
         sock.bind(('127.0.0.1', 0)); port = sock.getsockname()[1]
     env = dict(os.environ, LCHAT_CONFIG=str(temp/'config.php'))
@@ -25,7 +25,7 @@ with tempfile.TemporaryDirectory(prefix='lchat-settings-') as directory:
             csrf = session.get(base+'api.php?action=me').json()['csrf']
             r = session.post(base+'api.php?action=register', headers={'X-CSRF-Token':csrf}, json={'name':'Test User', 'username':username, 'email':username+'@example.test', 'password':'strong-password-123'})
             assert r.ok, r.text
-        register(owner, 'leosmleol'); register(stranger, 'outsider')
+        register(owner, 'customowner'); register(stranger, 'outsider')
         me = owner.get(base+'admin.php?action=me').json(); csrf = me['csrf']
         assert stranger.get(base+'admin.php?action=site.settings').status_code == 403
         assert owner.post(base+'admin.php?action=site.save', json={}).status_code == 403
@@ -36,12 +36,20 @@ with tempfile.TemporaryDirectory(prefix='lchat-settings-') as directory:
         assert 'temporary-secret-for-test' not in str(settings)
         assert 'New &lt;name&gt;' in owner.get(base).text
         assert owner.get(base+'api.php?action=me').json()['registration_open'] is False
+        create = owner.post(base+'api.php?action=room.create', headers={'X-CSRF-Token':csrf}, json={'title':'Test call'}); assert create.ok, create.text
+        token = create.json()['token']
+        assert owner.get(base+'api.php?action=room.info', params={'token':token}).json()['limit'] == 5
+        join = owner.post(base+'api.php?action=room.join', headers={'X-CSRF-Token':csrf}, json={'token':token}); assert join.ok, join.text
+        call = join.json(); assert call['ice_transport_policy'] == 'relay'
+        turn = next(server for server in call['ice_servers'] if str(server['urls']).startswith('turn:'))
+        assert turn['credential'] == base64.b64encode(hmac.new(values['turn_secret'].encode(), turn['username'].encode(), hashlib.sha1).digest()).decode()
+        assert values['turn_secret'] not in join.text
         values['max_call_participants'] = 999
         assert owner.post(base+'admin.php?action=site.save', headers={'X-CSRF-Token':csrf}, json=values).status_code == 409
         assert owner.get(base+'admin.php?action=site.settings').json()['max_call_participants'] == 5
         assert owner.post(base+'admin.php?action=site.reset', headers={'X-CSRF-Token':csrf}, json={}).ok
         restored = owner.get(base+'admin.php?action=site.settings').json()
         assert restored['site_name'] == 'From config' and restored['registration_open'] and not restored['turn_secret_set']
-        print('PASS: config fallback, owner and CSRF checks, save, secret redaction, HTML escaping, registration, validation and reset')
+        print('PASS: config fallback, configured owner, CSRF, save, secret redaction, HTML escaping, registration, call limit and TURN credentials, validation and reset')
     finally:
         server.terminate(); server.wait(timeout=10)
