@@ -1,30 +1,30 @@
 'use strict';
 (() => {
   const trigger = document.getElementById('main-menu');
-  const menu = document.getElementById('webk-menu');
+  const menu = document.getElementById('weba-menu');
   const search = document.getElementById('chat-filter');
   if (!trigger || !menu) return;
 
-  // Telegram WebK keeps search beside the menu and the compose action floating.
+  // Telegram Web A keeps search beside the menu and the compose action floating.
   const sidebar = document.querySelector('.sidebar');
   const searchBox = document.querySelector('.sidebar .search-box');
   const newChat = document.getElementById('new-chat');
   if (searchBox) trigger.after(searchBox);
   if (newChat && sidebar) {
     sidebar.append(newChat);
-    const composeGlyph = newChat.querySelector('.webk-icon');
-    if (composeGlyph) composeGlyph.textContent = String.fromCodePoint(0xe977);
+    const composeGlyph = newChat.querySelector('.weba-icon');
+    if (composeGlyph) composeGlyph.textContent = String.fromCodePoint(0xf17d);
   }
   const callLink = document.createElement('button');
   callLink.type = 'button';
   callLink.dataset.proxyTarget = 'create-link';
-  callLink.dataset.menuIcon = '\\ue9bb';
+  callLink.dataset.menuIcon = '\\uf1b9';
   callLink.textContent = document.documentElement.lang === 'ru' ? 'Звонок по ссылке' : 'Call by link';
   menu.querySelector('a')?.before(callLink);
 
   menu.querySelectorAll('[data-menu-icon]').forEach(item => {
     const glyph = document.createElement('span');
-    glyph.className = 'webk-icon';
+    glyph.className = 'weba-icon';
     glyph.setAttribute('aria-hidden', 'true');
     glyph.textContent = String.fromCodePoint(parseInt(item.dataset.menuIcon.slice(2), 16));
     item.prepend(glyph);
@@ -60,14 +60,14 @@
     emojiButton.setAttribute('aria-label', emojiButton.title);
     emojiButton.setAttribute('aria-expanded', 'false');
     const glyph = document.createElement('span');
-    glyph.className = 'webk-icon';
+    glyph.className = 'weba-icon';
     glyph.setAttribute('aria-hidden', 'true');
-    glyph.textContent = String.fromCodePoint(0xea2e);
+    glyph.textContent = String.fromCodePoint(0xf248);
     emojiButton.append(glyph);
     composer.prepend(emojiButton);
     emojiPanel = document.createElement('div');
-    emojiPanel.id = 'webk-emoji-panel';
-    emojiPanel.className = 'webk-emoji-panel';
+    emojiPanel.id = 'weba-emoji-panel';
+    emojiPanel.className = 'weba-emoji-panel';
     emojiPanel.hidden = true;
     emojiPanel.setAttribute('aria-label', emojiButton.title);
     for (const emoji of ['😀','😊','😂','❤️','👍','🔥','🎉','😎','🥰','🙏','✨','👋','💬','✅','😢','😡','🤔','🙌','🎵','💯']) {

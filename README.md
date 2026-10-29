@@ -2,7 +2,7 @@
 
 LChat is a self-hosted PHP messenger with private chats, groups, channels, file and voice messages, voice/video calls, and a Bot API. This repository contains the English web version for Apache hosting, including REG.RU shared hosting.
 
-The web interface uses selected components from the open-source Telegram WebK interface. LChat uses its own accounts and server. See [source attribution](TELEGRAM_SOURCE.md) and the [GPL-3.0 license](LICENSE).
+The web interface uses selected components from the open-source Telegram Web A interface. LChat uses its own accounts and server. See [source attribution](TELEGRAM_SOURCE.md) and the [GPL-3.0 license](LICENSE).
 
 ## Requirements
 
