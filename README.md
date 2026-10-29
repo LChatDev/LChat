@@ -4,7 +4,11 @@ LChat is a self-hosted PHP messenger with private chats, groups, channels, file 
 
 The web interface uses selected components from the open-source Telegram Web A interface. LChat uses its own accounts and server. See [source attribution](TELEGRAM_SOURCE.md) and the [GPL-3.0 license](LICENSE).
 
-## Requirements
+## Android app
+
+Download the installable [LChat 2.0.4 APK](https://github.com/leosmleol-svg/LChat/releases/download/android-v2.0.4/LChat-2.0.4-universal.apk) (Android 8.0+). Native Android source, build instructions and testing limitations are in [android/README.md](android/README.md). Release assets also include a SHA-256 checksum. The native app has its own interface; web styling changes do not automatically change the APK.
+
+## Server requirements
 
 - PHP 8.2 or newer with `pdo_mysql`, `mbstring`, `fileinfo`, `curl`, and `gd` (for profile photos)
 - MySQL or MariaDB
