@@ -1,4 +1,4 @@
-const CACHE = 'lchat-static-20261029-webk1';
+const CACHE = 'lchat-static-20261029-webk2';
 const STATIC = [
   '/assets/style.css?v=20261026-login2',
   '/assets/theme.css?v=20261013-glass1',
@@ -8,9 +8,11 @@ const STATIC = [
   '/assets/telegram-web.css?v=20261026-tg1',
   '/assets/aurora.css?v=20261029-en1',
   '/assets/webk-ui.css?v=20261029-webk1',
+  '/assets/webk-precise.css?v=20261029-webk2',
+  '/assets/webk-pattern.svg',
   '/assets/message-extra.css?v=20261026-reactions1',
-  '/assets/app.js?v=20261029-webk1',
-  '/assets/webk-ui.js?v=20261029-webk1',
+  '/assets/app.js?v=20261029-webk2',
+  '/assets/webk-ui.js?v=20261029-webk2',
   '/assets/tgico.woff',
   '/assets/settings.js?v=20261029-en1',
   '/assets/bots.js?v=20261029-en1',
