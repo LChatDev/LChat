@@ -2,6 +2,8 @@
 
 This guide uses Apache and a hosting control panel such as REG.RU. LChat uses PHP for the website and signaling, and MySQL or MariaDB for accounts and messages. Calls between users also require HTTPS and, for many networks, a separate [TURN service](CALLS.md).
 
+For a VM-based free-tier alternative hosting the site, database and TURN together, see [FREE_HOSTING.md](FREE_HOSTING.md). Provider eligibility and capacity limits apply.
+
 ## 1. Prepare hosting and a domain
 
 1. Point a domain or subdomain to your hosting using the DNS values supplied by your host. Wait for DNS to resolve and attach the domain to the site in the hosting panel.
