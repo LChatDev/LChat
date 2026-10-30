@@ -61,3 +61,12 @@ Back up your private `config.php`, `data/`, and `files/` before replacing the si
 ## Source and secrets
 
 The repository ignores `config.php`, local auth configuration, runtime data, and uploaded files. Do not manually upload those files to GitHub. If a secret was exposed, replace it in the service where it is used.
+
+## Руководства / Guides
+
+- Windows: [Русский](WINDOWS_HOST_RU.md) · [English](WINDOWS_HOST_EN.md)
+- Открытие портов и туннели / Port forwarding and tunnels: [Русский](PORT_TOOLS_RU.md) · [English](PORT_TOOLS_EN.md)
+- Звонки и TURN / Calls and TURN: [Русский](CALLS_RU.md) · [English](CALLS_EN.md)
+- Бесплатный хостинг / Free hosting: [Русский](FREE_HOSTING_RU.md) · [English](FREE_HOSTING_EN.md)
+
+Дополнительные репозитории / Dedicated guides: [LChatCalls](https://github.com/LChatDev/LChatCalls) · [LChatFree](https://github.com/LChatDev/LChatFree).
