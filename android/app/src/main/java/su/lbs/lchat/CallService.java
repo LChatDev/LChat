@@ -27,6 +27,7 @@ public final class CallService extends Service {
     public static volatile boolean active=false, muted=false, speaker=false;
     public static volatile boolean closing=false, launching=false;
     public static volatile String status="";
+    public static volatile String participantSummary="";
     public static volatile String displayName="Голосовой звонок";
     public static volatile long callStartedMillis=0;
     public static volatile String incomingName="", incomingToken="";
@@ -56,6 +57,7 @@ public final class CallService extends Service {
 
     private boolean flushScheduled=false;
     private int signalFailures=0;
+    private long lastIceRefresh=0;
     private List<PeerConnection.IceServer> ice=new ArrayList<>();
     private PeerConnection.IceTransportsType transport=PeerConnection.IceTransportsType.ALL;
 
@@ -63,7 +65,7 @@ public final class CallService extends Service {
         String id,name;
         PeerConnection pc;
         final ArrayList<IceCandidate> candidates=new ArrayList<>();
-        boolean offered=false,negotiating=false,connected=false;
+        boolean offered=false,negotiating=false,connected=false,closed=false;
         int restarts=0;
         ScheduledFuture<?> retry;
     }
@@ -86,7 +88,8 @@ public final class CallService extends Service {
         if("decline".equals(command)){submit(()->{if(!incomingToken.isEmpty())ignoredCalls.add(incomingToken);incomingToken="";incomingName="";publish(status);});return START_NOT_STICKY;}
         if("input".equals(command)){int device=intent.getIntExtra("device",0);submit(()->changeInput(device));return START_NOT_STICKY;}
         if("mic".equals(command)){submit(()->{muted=!muted;if(audioTrack!=null)audioTrack.setEnabled(!muted);publish(status);});return START_NOT_STICKY;}
-        if("speaker".equals(command)){submit(()->{speaker=!speaker;if(audio!=null)audio.setSpeakerphoneOn(speaker);publish(status);});return START_NOT_STICKY;}
+        if("speaker".equals(command)){submit(this::toggleSpeaker);return START_NOT_STICKY;}
+        if("retry".equals(command)){submit(()->{lastIceRefresh=0;for(Peer p:peers.values()){p.restarts=0;if(p.retry!=null)p.retry.cancel(false);p.retry=null;recover(p);}publish("Восстанавливаем соединение…");});return START_NOT_STICKY;}
         if(!"start".equals(command))return START_NOT_STICKY;CallDiagnostics.event("ENGINE_START_RECEIVED");launching=false;if(active)return START_NOT_STICKY;
         if(stopping||closing){ToastUtil.show(this,"Предыдущий звонок ещё завершается");return START_NOT_STICKY;}
         base=intent.getStringExtra("base");token=intent.getStringExtra("token");endpoint=intent.getStringExtra("endpoint");cookie=intent.getStringExtra("cookie");
@@ -111,10 +114,27 @@ public final class CallService extends Service {
         if(client==null)return;Bundle state=new Bundle();state.putLong("generation",clientGeneration);
         state.putBoolean("active",active);state.putBoolean("launching",launching);state.putBoolean("closing",closing);state.putBoolean("finished",finished);
         state.putBoolean("muted",muted);state.putBoolean("speaker",speaker);state.putString("status",status);state.putString("name",displayName);
-        state.putString("incoming_token",incomingToken);state.putString("incoming_name",incomingName);state.putString("admins",adminPresence);state.putString("arrival",adminArrival);
+        state.putString("participants",participantSummary);state.putString("incoming_token",incomingToken);state.putString("incoming_name",incomingName);state.putString("admins",adminPresence);state.putString("arrival",adminArrival);
         state.putLong("arrival_until",adminArrivalUntil);state.putLong("started",callStartedMillis);
         state.putString("id",id==null?"":id);state.putString("token",token==null?"":token);state.putString("base",base==null?"":base);
         try{Message message=Message.obtain(null,STATE);message.setData(state);client.send(message);}catch(RemoteException e){client=null;}
+    }
+    private void toggleSpeaker(){
+        if(audio==null)return;
+        boolean desired=!speaker;
+        try{
+            if(Build.VERSION.SDK_INT>=31){
+                if(!desired){audio.clearCommunicationDevice();speaker=false;}
+                else {boolean selected=false;for(AudioDeviceInfo device:audio.getAvailableCommunicationDevices())if(device.getType()==AudioDeviceInfo.TYPE_BUILTIN_SPEAKER){selected=audio.setCommunicationDevice(device);break;}if(!selected){publish("Динамик недоступен");return;}speaker=true;}
+            }else{audio.setSpeakerphoneOn(desired);speaker=desired;}
+            publish(status);
+        }catch(SecurityException e){publish("Разрешите доступ к устройствам Bluetooth в настройках приложения");}
+    }
+    private boolean live(Peer peer){return !stopping&&!cancelRequested&&!peer.closed&&peers.get(peer.id)==peer;}
+    private void updateIce(JSONArray servers)throws JSONException{
+        if(servers==null)return;List<PeerConnection.IceServer> fresh=new ArrayList<>();
+        for(int i=0;i<servers.length();i++){JSONObject server=servers.getJSONObject(i);Object urls=server.get("urls");ArrayList<String> addresses=new ArrayList<>();if(urls instanceof JSONArray){JSONArray rows=(JSONArray)urls;for(int k=0;k<rows.length();k++)addresses.add(rows.getString(k));}else addresses.add(urls.toString());fresh.add(PeerConnection.IceServer.builder(addresses).setUsername(server.optString("username","")).setPassword(server.optString("credential","")).createIceServer());}
+        ice=fresh;for(Peer peer:peers.values())if(live(peer)){PeerConnection.RTCConfiguration config=new PeerConnection.RTCConfiguration(ice);config.sdpSemantics=PeerConnection.SdpSemantics.UNIFIED_PLAN;config.iceTransportsType=transport;peer.pc.setConfiguration(config);}lastIceRefresh=System.currentTimeMillis();
     }
     private void changeInput(int device){
         if(audioDevice==null||audio==null)return;
@@ -180,7 +200,7 @@ public final class CallService extends Service {
             audio=getSystemService(AudioManager.class);audio.setMode(AudioManager.MODE_IN_COMMUNICATION);
             AudioAttributes attributes=new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build();
             focus=new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN).setAudioAttributes(attributes).setOnAudioFocusChangeListener(change->{if(change==AudioManager.AUDIOFOCUS_LOSS)submit(()->stopCall("Аудио используется другим приложением"));}).build();
-            audio.requestAudioFocus(focus);
+            if(audio.requestAudioFocus(focus)!=AudioManager.AUDIOFOCUS_REQUEST_GRANTED)throw new IOException("Microphone audio focus unavailable");
             wake=getSystemService(PowerManager.class).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,"LChat:Call");wake.acquire(7*60*60*1000L);
             CallDiagnostics.event("WEBRTC_INITIALIZE");PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(getApplicationContext()).createInitializationOptions());
             audioDevice=createAudioDevice();
@@ -192,7 +212,7 @@ public final class CallService extends Service {
     private void poll(){
         if(stopping||cancelRequested)return;
         try{
-            JSONObject data=api("room.poll",object("token",token,"id",id,"after",after,"muted",muted,"camera",false));if(cancelRequested||stopping)return;failures=0;
+            JSONObject data=api("room.poll",object("token",token,"id",id,"after",after,"muted",muted,"camera",false,"refresh_ice",System.currentTimeMillis()-lastIceRefresh>15*60*1000L));if(cancelRequested||stopping)return;failures=0;updateIce(data.optJSONArray("ice_servers"));
             incomingToken="";incomingName="";JSONArray waiting=data.optJSONArray("incoming_calls");
             if(waiting!=null)for(int w=0;w<waiting.length();w++){JSONObject call=waiting.getJSONObject(w);if(!ignoredCalls.contains(call.getString("token"))){incomingToken=call.getString("token");incomingName=call.getString("caller");break;}}
             JSONArray list=data.getJSONArray("peers");Set<String> ids=new HashSet<>();StringBuilder admins=new StringBuilder();
@@ -202,6 +222,7 @@ public final class CallService extends Service {
             for(String old:new ArrayList<>(peers.keySet()))if(!ids.contains(old))removePeer(old);
             for(int i=0;i<list.length();i++){JSONObject info=list.getJSONObject(i);String pid=info.getString("id");Peer p=peers.get(pid);if(p==null){p=createPeer(pid,info.getString("name"));peers.put(pid,p);}if(id.compareTo(pid)<0&&!p.offered)offer(p,false);}
             JSONArray signals=data.getJSONArray("signals");for(int i=0;i<signals.length();i++){JSONObject signal=signals.getJSONObject(i);Peer p=peers.get(signal.getString("sender"));if(p!=null)handleSignal(p,signal.getJSONObject("payload"));after=Math.max(after,signal.getLong("id"));}
+            StringBuilder participants=new StringBuilder();for(int k=0;k<list.length();k++){JSONObject info=list.getJSONObject(k);Peer peer=peers.get(info.optString("id"));if(participants.length()>0)participants.append('\n');participants.append(info.optString("name")).append(info.optInt("muted")==1?" · микрофон выключен":"").append(peer!=null&&peer.connected?" · на связи":" · подключается");}participantSummary=participants.toString();
             long connected=peers.values().stream().filter(p->p.connected).count();publish("В звонке: "+(peers.size()+1)+" · На связи: "+connected+(incomingName.isEmpty()?"":" · Входящий: "+incomingName));
         }catch(Exception e){failures++;if(e instanceof ApiError&&Arrays.asList(401,403,404,410).contains(((ApiError)e).code)){stopCall(e.getMessage());return;}publish("Восстанавливаем связь с сервером…");if(failures>15){stopCall("Сеть недоступна. Войдите в звонок заново.");return;}}
         if(!stopping&&!cancelRequested)loop.schedule(this::poll,failures>0?3000:1000,TimeUnit.MILLISECONDS);
@@ -223,32 +244,33 @@ public final class CallService extends Service {
             // Remote audio tracks are enabled by default. Do not access JNI wrappers
             // on this callback thread while the signalling thread may replace them.
             @Override public void onTrack(RtpTransceiver t){CallDiagnostics.event("REMOTE_AUDIO_TRACK");}
-            @Override public void onConnectionChange(PeerConnection.PeerConnectionState state){submit(()->{p.connected=state==PeerConnection.PeerConnectionState.CONNECTED;if(p.connected){CallDiagnostics.event("PEER_CONNECTED");p.restarts=0;if(p.retry!=null)p.retry.cancel(false);p.retry=null;}else if(state==PeerConnection.PeerConnectionState.FAILED||state==PeerConnection.PeerConnectionState.DISCONNECTED)recover(p);});}
+            @Override public void onConnectionChange(PeerConnection.PeerConnectionState state){submit(()->{if(!live(p))return;p.connected=state==PeerConnection.PeerConnectionState.CONNECTED;if(p.connected){CallDiagnostics.event("PEER_CONNECTED");p.restarts=0;if(p.retry!=null)p.retry.cancel(false);p.retry=null;}else if(state==PeerConnection.PeerConnectionState.FAILED||state==PeerConnection.PeerConnectionState.DISCONNECTED)recover(p);});}
         });
         if(p.pc==null)throw new IllegalStateException("Cannot create peer connection");
         if(id.compareTo(pid)<0)p.pc.addTransceiver(audioTrack,new RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.SEND_RECV,Collections.singletonList("lchat")));
         recover(p);return p;
     }
     private void offer(Peer p,boolean restart){
-        if(p.negotiating||stopping||(!restart&&p.offered))return;p.negotiating=true;
+        if(!live(p)||p.negotiating||(!restart&&p.offered))return;p.negotiating=true;
         MediaConstraints constraints=new MediaConstraints();if(restart)constraints.mandatory.add(new MediaConstraints.KeyValuePair("IceRestart","true"));
-        Runnable create=()->p.pc.createOffer(new Sdp(){@Override public void onCreateSuccess(SessionDescription s){submit(()->localDescription(p,s));}@Override public void onCreateFailure(String e){submit(()->{p.negotiating=false;recover(p);});}},constraints);
+        Runnable create=()->{if(!live(p))return;p.pc.createOffer(new Sdp(){@Override public void onCreateSuccess(SessionDescription s){submit(()->localDescription(p,s));}@Override public void onCreateFailure(String e){submit(()->{p.negotiating=false;recover(p);});}},constraints);};
         if(restart&&p.pc.signalingState()==PeerConnection.SignalingState.HAVE_LOCAL_OFFER)p.pc.setLocalDescription(new Sdp(){@Override public void onSetSuccess(){submit(create);}@Override public void onSetFailure(String e){submit(()->{p.negotiating=false;recover(p);});}},new SessionDescription(SessionDescription.Type.ROLLBACK,""));else create.run();
     }
     private void localDescription(Peer p,SessionDescription s){
-        if(stopping||!peers.containsKey(p.id))return;
-        p.pc.setLocalDescription(new Sdp(){@Override public void onSetSuccess(){submit(()->{p.negotiating=false;p.offered=true;send(p,object("type",s.type.canonicalForm(),"sdp",s.description));});}@Override public void onSetFailure(String e){submit(()->{p.negotiating=false;recover(p);});}},s);
+        if(!live(p))return;
+        p.pc.setLocalDescription(new Sdp(){@Override public void onSetSuccess(){submit(()->{if(!live(p))return;p.negotiating=false;p.offered=true;send(p,object("type",s.type.canonicalForm(),"sdp",s.description));});}@Override public void onSetFailure(String e){submit(()->{p.negotiating=false;recover(p);});}},s);
     }
     private void handleSignal(Peer p,JSONObject message)throws JSONException{
+        if(!live(p))return;
         String type=message.getString("type");
         if("restart".equals(type)){if(id.compareTo(p.id)<0)offer(p,true);return;}
-        if("candidate".equals(type)){JSONObject c=message.getJSONObject("candidate");IceCandidate candidate=new IceCandidate(c.optString("sdpMid",null),c.optInt("sdpMLineIndex",0),c.getString("candidate"));if(p.pc.getRemoteDescription()!=null)p.pc.addIceCandidate(candidate);else p.candidates.add(candidate);return;}
+        if("candidate".equals(type)){JSONObject c=message.getJSONObject("candidate");IceCandidate candidate=new IceCandidate(c.optString("sdpMid",null),c.optInt("sdpMLineIndex",0),c.getString("candidate"));if(p.pc.getRemoteDescription()!=null)p.pc.addIceCandidate(candidate);else if(p.candidates.size()<256)p.candidates.add(candidate);return;}
         if(!Arrays.asList("offer","answer").contains(type))return;
         if("offer".equals(type)&&id.compareTo(p.id)<0)return;
         if("answer".equals(type)&&p.pc.signalingState()!=PeerConnection.SignalingState.HAVE_LOCAL_OFFER)return;
         SessionDescription description=new SessionDescription(SessionDescription.Type.fromCanonicalForm(type),message.getString("sdp"));
         p.pc.setRemoteDescription(new Sdp(){@Override public void onSetSuccess(){submit(()->{
-            if(stopping||!peers.containsKey(p.id))return;
+            if(!live(p))return;
             for(IceCandidate c:p.candidates)p.pc.addIceCandidate(c);p.candidates.clear();
             if("offer".equals(type)){
                 for(RtpTransceiver t:p.pc.getTransceivers()){
@@ -260,7 +282,7 @@ public final class CallService extends Service {
         });}@Override public void onSetFailure(String e){submit(()->recover(p));}},description);
     }
     private void send(Peer p,JSONObject payload){
-        if(stopping||!peers.containsKey(p.id))return;outgoing.add(object("to",p.id,"payload",payload));
+        if(!live(p))return;outgoing.add(object("to",p.id,"payload",payload));
         if(!flushScheduled){flushScheduled=true;loop.schedule(this::flush,30,TimeUnit.MILLISECONDS);}
     }
     private void flush(){
@@ -294,10 +316,10 @@ public final class CallService extends Service {
         if(!outgoing.isEmpty()&&!stopping){flushScheduled=true;loop.schedule(this::flush,delay,TimeUnit.MILLISECONDS);}
     }
     private void recover(Peer p){
-        if(stopping||p.retry!=null)return;
-        p.retry=loop.schedule(()->{p.retry=null;if(stopping||p.connected||!peers.containsKey(p.id))return;if(p.restarts++>=2){publish("Связь с участником потеряна. Повторите вход.");return;}if(id.compareTo(p.id)<0)offer(p,true);else send(p,object("type","restart"));recover(p);},10,TimeUnit.SECONDS);
+        if(stopping||p.closed||p.retry!=null)return;
+        p.retry=loop.schedule(()->{p.retry=null;if(!live(p)||p.connected)return;if(p.restarts++>=2){publish("Связь с участником потеряна. Повторите вход.");return;}if(id.compareTo(p.id)<0)offer(p,true);else send(p,object("type","restart"));recover(p);},10,TimeUnit.SECONDS);
     }
-    private void removePeer(String pid){Peer p=peers.remove(pid);if(p!=null){if(p.retry!=null)p.retry.cancel(false);attempt(()->p.pc.close());attempt(()->p.pc.dispose());}}
+    private void removePeer(String pid){Peer p=peers.remove(pid);if(p!=null){p.closed=true;if(p.retry!=null)p.retry.cancel(false);attempt(()->p.pc.close());attempt(()->p.pc.dispose());}}
     private void attempt(Runnable operation){try{operation.run();}catch(Exception e){android.util.Log.w("LChat","Audio cleanup failed",e);}}
     private void releaseLease(){if(id!=null)try{MobileApi.requestSessionless(base,cookie,"mobile.release",object("token",token,"id",id),csrf);CallLease.clear(this,id);CallDiagnostics.event("CONNECTION_RELEASED");}catch(Exception e){CallDiagnostics.event("CONNECTION_RELEASE_DEFERRED",e);}}
     private void stopCall(String text){
@@ -311,7 +333,7 @@ public final class CallService extends Service {
         if(factory!=null){attempt(()->factory.dispose());factory=null;}if(audioDevice!=null){attempt(()->audioDevice.release());audioDevice=null;}
         if(audio!=null){attempt(()->{if(Build.VERSION.SDK_INT>=31)audio.clearCommunicationDevice();else{audio.stopBluetoothSco();audio.setBluetoothScoOn(false);}});attempt(()->audio.setSpeakerphoneOn(false));attempt(()->audio.setMode(AudioManager.MODE_NORMAL));if(focus!=null)attempt(()->audio.abandonAudioFocusRequest(focus));}
         if(wake!=null&&wake.isHeld())attempt(()->wake.release());outgoing.clear();
-        incomingName="";incomingToken="";ignoredCalls.clear();adminPresence="";adminArrival="";adminArrivalUntil=0;seenAdmins.clear();
+        participantSummary="";incomingName="";incomingToken="";ignoredCalls.clear();adminPresence="";adminArrival="";adminArrivalUntil=0;seenAdmins.clear();
     }
     @Override public void onDestroy(){
         if(!stopping){stopping=true;closing=true;cancelRequested=true;HttpURLConnection request=activeRequest;if(request!=null)request.disconnect();try{loop.execute(()->{try{cleanup();}finally{releaseLease();cookie=null;csrf=null;closing=false;}});}catch(RejectedExecutionException ignored){closing=false;}}else closing=false;

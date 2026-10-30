@@ -33,7 +33,7 @@ final class CallClient {
             CallService.speaker=state.getBoolean("speaker");
             String status=state.getString("status","");
             if(CallService.active||!status.isEmpty())CallService.status=status;
-            CallService.displayName=state.getString("name","Голосовой звонок");
+            CallService.participantSummary=state.getString("participants","");CallService.displayName=state.getString("name","Голосовой звонок");
             CallService.incomingToken=state.getString("incoming_token","");
             CallService.incomingName=state.getString("incoming_name","");
             CallService.adminPresence=state.getString("admins","");

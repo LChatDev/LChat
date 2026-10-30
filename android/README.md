@@ -4,16 +4,16 @@ Native Android client for the LChat PHP server: account registration and login, 
 
 ## Download and install
 
-Download **LChat-2.1.0-universal.apk** from [GitHub Releases](https://github.com/LChatDev/LChat/releases/tag/android-v2.1.0). This is one installable APK, not a split APK bundle. Install it over the previous LChat app to retain its local settings and session. It uses the same package and signing certificate as the previous 2.0.3 build.
+Download **LChat-2.2.0-universal.apk** from [GitHub Releases](https://github.com/LChatDev/LChat/releases/tag/android-v2.2.0). This is one installable APK, not a split APK bundle. Install it over the previous LChat app to retain its local settings and session. It uses the same package and signing certificate as the previous 2.0.3 build.
 
 - Android 8.0 or later (min SDK 26; target SDK 35).
 - ARM64, ARMv7, x86 and x86_64 are included.
-- Package: `su.lbs.lchat`; version: `2.1.0`; version code: `21`.
+- Package: `su.lbs.lchat`; version: `2.2.0`; version code: `22`.
 - Default server: `https://chat.lbs.su/`. Change the address from the app menu to use another compatible LChat server.
 - Grant microphone and notification permissions for calls. No Telecom phone account is required.
 - The server must have working HTTPS and the matching LChat mobile API. TURN is configured by the server administrator.
 
-The `.apk.sha256` release attachment contains the download checksum. In PowerShell, use `Get-FileHash .\LChat-2.1.0-universal.apk -Algorithm SHA256` to compare it.
+The `.apk.sha256` release attachment contains the download checksum. In PowerShell, use `Get-FileHash .\LChat-2.2.0-universal.apk -Algorithm SHA256` to compare it.
 
 ## Calls and limitations
 
@@ -21,7 +21,7 @@ Voice calls run in a separate foreground audio process, with notification contro
 
 Release checks cover the archive CRCs, DEX checksums, four native ABI libraries, Android manifest, APK alignment and signature, including verification for Android 12/12L. The signing certificate matches 2.0.3. No physical phone was available for this release: on-device installation, microphone routing and background calling have not been verified. This is not a claim of compatibility with every device.
 
-In 2.1.0, the Android client accepts text up to 10 MiB UTF-8 and displays long messages in pages. This requires a server that supports the same limit, including the updated chat.lbs.su. Samsung audio processing remains experimental; calls and large messages have not been tested on a physical phone. No crash report is sent automatically.
+The Android client accepts text up to 10 MiB UTF-8 and displays long messages in pages. This requires a server that supports the same limit, including the updated chat.lbs.su. Samsung audio processing remains experimental; calls and large messages have not been tested on a physical phone. No crash report is sent automatically.
 
 ## Build from source on Windows
 
@@ -37,9 +37,30 @@ From the repository root:
 
 ```powershell
 .\android\build.ps1 -JavaHome 'C:\tools\jdk-21' -BuildTools 'C:\tools\android-sdk\build-tools\35.0.0' -AndroidJar 'C:\tools\android-sdk\platforms\android-35\android.jar' -WebRtcDir 'C:\tools\webrtc-150.7871.01'
-node .\android\tests\apk-integrity.cjs .\android\LChat-2.1.0-universal.apk
+node .\android\tests\apk-integrity.cjs .\android\LChat-2.2.0-universal.apk
 ```
 
 The script creates `LChat.apk`, the versioned universal APK and its SHA-256 file. A new checkout generates its own signing key in `android/signing/`; such a build cannot update the official APK without uninstalling it first. Keep your signing key and password private and backed up. To update your own builds, reuse your own signing directory. Official release keys are not included in this repository.
 
 The Android sources are distributed under the repository's GPL-3.0 license. WebRTC notices are in `licenses/` and bundled in the APK. No database credentials, installation key, bot tokens or permanent TURN credentials are bundled.
+
+## Interface and calls in 2.2.0
+
+Native dark chat lists, circular avatars, a compact message composer, message replies,
+reactions and editing, date separators, channel/group filters, file lists, invitations,
+and owner-only name and membership controls. Search and file lists on the website cover
+loaded messages. The app retains the 10 MiB UTF-8 text limit.
+
+The full-screen call view can be collapsed into the chat banner without stopping the
+foreground audio service. It includes participants, mute, speaker and reconnect actions.
+Android 12+ speaker routing uses `AudioManager.setCommunicationDevice`; older versions
+retain the legacy route. TURN credentials refresh during polling; closed peer callbacks
+are ignored. Update the PHP server alongside the APK for `chat.info`, `chat.update`,
+`channel.remove` and credential refresh support.
+
+This is a prerelease. Compilation, signing and server/browser integration checks pass.
+Audio quality, native crash recovery and background calls still require a physical-device
+test, especially on the Samsung devices with previously reported native WebRTC aborts.
+The native WebRTC library is unchanged; this release does not prove those aborts fixed.
+
+Audio route reference: https://developer.android.com/reference/android/media/AudioManager#setCommunicationDevice(android.media.AudioDeviceInfo)
