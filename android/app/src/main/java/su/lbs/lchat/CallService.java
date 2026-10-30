@@ -173,7 +173,7 @@ public final class CallService extends Service {
             CallDiagnostics.event("API_ME");JSONObject me=request("api.php","me",null);if(me.isNull("user"))throw new IOException("Сначала войдите в аккаунт");csrf=me.getString("csrf");
             CallLease.recover(this,base,cookie);if(cancelRequested)return;
             CallDiagnostics.event("API_ROOM_JOIN");JSONObject joined=api("room.join",object("token",token,"listen",muted));id=joined.getString("id");CallDiagnostics.event("ROOM_JOINED");CallLease.remember(this,base,token,id);savedConnection=new CountDownLatch(1);notifyUi();
-            if(!savedConnection.await(3,TimeUnit.SECONDS))throw new IOException("Не удалось сохранить состояние звонка");
+            if(!savedConnection.await(15,TimeUnit.SECONDS)){CallDiagnostics.event("CONNECTION_SAVE_TIMEOUT");throw new IOException("Не удалось сохранить состояние звонка");}
             CallDiagnostics.event("CONNECTION_SAVED_BY_APP");if(cancelRequested)return;
             JSONArray servers=joined.getJSONArray("ice_servers");for(int i=0;i<servers.length();i++){JSONObject s=servers.getJSONObject(i);Object urls=s.get("urls");ArrayList<String> addresses=new ArrayList<>();if(urls instanceof JSONArray){JSONArray a=(JSONArray)urls;for(int k=0;k<a.length();k++)addresses.add(a.getString(k));}else addresses.add(urls.toString());ice.add(PeerConnection.IceServer.builder(addresses).setUsername(s.optString("username","")).setPassword(s.optString("credential","")).createIceServer());}
             transport="relay".equals(joined.optString("ice_transport_policy"))?PeerConnection.IceTransportsType.RELAY:PeerConnection.IceTransportsType.ALL;

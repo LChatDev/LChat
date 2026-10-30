@@ -23,8 +23,11 @@ final class CallClient {
             Bundle state=message.getData();
             if(state.getLong("generation")!=generation)return;
             ready=!state.getBoolean("finished")&&engine!=null;
+            // An idle state may have been queued before startForegroundService.
+            // Do not let that stale reply cancel a launch that is already in progress.
+            boolean starting=CallService.launching&&!state.getBoolean("active")&&!state.getBoolean("finished");
             CallService.active=state.getBoolean("active");
-            CallService.launching=state.getBoolean("launching");
+            CallService.launching=starting||state.getBoolean("launching");
             CallService.closing=state.getBoolean("closing");
             CallService.muted=state.getBoolean("muted");
             CallService.speaker=state.getBoolean("speaker");
