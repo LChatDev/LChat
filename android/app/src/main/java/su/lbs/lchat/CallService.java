@@ -55,6 +55,7 @@ public final class CallService extends Service {
     private volatile HttpURLConnection activeRequest;
 
     private boolean flushScheduled=false;
+    private int signalFailures=0;
     private List<PeerConnection.IceServer> ice=new ArrayList<>();
     private PeerConnection.IceTransportsType transport=PeerConnection.IceTransportsType.ALL;
 
@@ -265,8 +266,32 @@ public final class CallService extends Service {
     private void flush(){
         flushScheduled=false;if(stopping||outgoing.isEmpty())return;JSONArray batch=new JSONArray();int size=0;
         while(!outgoing.isEmpty()&&batch.length()<24){JSONObject packet=outgoing.get(0);int bytes=packet.toString().getBytes(StandardCharsets.UTF_8).length;if(batch.length()>0&&size+bytes>50000)break;outgoing.remove(0);batch.put(packet);size+=bytes;}
-        try{api("room.signals",object("token",token,"id",id,"packets",batch));}catch(Exception e){publish("Восстанавливаем сигнализацию…");for(Peer p:peers.values())recover(p);}
-        if(!outgoing.isEmpty()&&!stopping){flushScheduled=true;loop.schedule(this::flush,30,TimeUnit.MILLISECONDS);}
+        long delay=30;
+        try{
+            JSONArray results=api("room.signals",object("token",token,"id",id,"packets",batch)).getJSONArray("results");
+            if(results.length()!=batch.length())throw new IOException("Incomplete signaling response");
+            signalFailures=0;
+            for(int i=0;i<results.length();i++){
+                JSONObject result=results.getJSONObject(i);
+                if(!result.optBoolean("ok")){
+                    CallDiagnostics.event("SIGNAL_REJECTED_"+result.optInt("status"));
+                    Peer peer=peers.get(batch.getJSONObject(i).getString("to"));
+                    if(peer!=null)recover(peer);
+                }
+            }
+        }catch(Exception e){
+            if(e instanceof ApiError&&Arrays.asList(401,403,404,410).contains(((ApiError)e).code)){stopCall(e.getMessage());return;}
+            CallDiagnostics.event("SIGNAL_SEND_FAILED",e);
+            publish("Восстанавливаем сигнализацию…");
+            if(++signalFailures<=3){
+                for(int i=batch.length()-1;i>=0;i--)outgoing.add(0,batch.optJSONObject(i));
+                delay=Math.min(5000,1000L*signalFailures);
+            }else{
+                signalFailures=0;
+                for(Peer p:peers.values())recover(p);
+            }
+        }
+        if(!outgoing.isEmpty()&&!stopping){flushScheduled=true;loop.schedule(this::flush,delay,TimeUnit.MILLISECONDS);}
     }
     private void recover(Peer p){
         if(stopping||p.retry!=null)return;
