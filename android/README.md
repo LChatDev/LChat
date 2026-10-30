@@ -4,7 +4,7 @@ Native Android client for the LChat PHP server: account registration and login, 
 
 ## Download and install
 
-Download **LChat-2.0.4-universal.apk** from [GitHub Releases](https://github.com/leosmleol-svg/LChat/releases/tag/android-v2.0.4). This is one installable APK, not a split APK bundle. Install it over the previous LChat app to retain its local settings and session. It uses the same package and signing certificate as the previous 2.0.3 build.
+Download **LChat-2.0.4-universal.apk** from [GitHub Releases](https://github.com/LChatDev/LChat/releases/tag/android-v2.0.4). This is one installable APK, not a split APK bundle. Install it over the previous LChat app to retain its local settings and session. It uses the same package and signing certificate as the previous 2.0.3 build.
 
 - Android 8.0 or later (min SDK 26; target SDK 35).
 - ARM64, ARMv7, x86 and x86_64 are included.

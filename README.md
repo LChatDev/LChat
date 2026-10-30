@@ -1,5 +1,8 @@
 # LChat
 
+**Windows и доступ к портам / Windows and port access:** [Инструкция для Windows](WINDOWS_HOST_RU.md) · [Windows guide](WINDOWS_HOST_EN.md) · [Программы и настройка](PORT_TOOLS_RU.md) · [Tools and setup](PORT_TOOLS_EN.md)
+
+
 > **Notice:** LChat was created entirely with the help of artificial intelligence. The project includes third-party components identified in its documentation and licenses.
 
 LChat is a self-hosted PHP messenger with private chats, groups, channels, file and voice messages, voice/video calls, and a Bot API. This repository contains the English web version for Apache hosting, including REG.RU shared hosting.
@@ -8,7 +11,7 @@ The web interface uses selected components from the open-source Telegram Web A i
 
 ## Android app
 
-Download the installable [LChat 2.0.4 APK](https://github.com/leosmleol-svg/LChat/releases/download/android-v2.0.4/LChat-2.0.4-universal.apk) (Android 8.0+). Native Android source, build instructions and testing limitations are in [android/README.md](android/README.md). Release assets also include a SHA-256 checksum. The native app has its own interface; web styling changes do not automatically change the APK.
+Download the installable [LChat 2.0.4 APK](https://github.com/LChatDev/LChat/releases/download/android-v2.0.4/LChat-2.0.4-universal.apk) (Android 8.0+). Native Android source, build instructions and testing limitations are in [android/README.md](android/README.md). Release assets also include a SHA-256 checksum. The native app has its own interface; web styling changes do not automatically change the APK.
 
 ## Server requirements
 

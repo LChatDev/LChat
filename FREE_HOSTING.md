@@ -27,7 +27,7 @@ On other distributions, package and service names can differ. Check `php -v` (PH
 Download the source **outside** the public directory and copy web files into the document root without the Git metadata:
 
 ```sh
-sudo git clone https://github.com/leosmleol-svg/LChat.git /opt/lchat-source
+sudo git clone https://github.com/LChatDev/LChat.git /opt/lchat-source
 sudo mkdir -p /var/www/lchat
 sudo rsync -a --exclude='.git/' --exclude='android/' --exclude='tools/' /opt/lchat-source/ /var/www/lchat/
 sudo cp /var/www/lchat/config.example.php /var/www/lchat/config.php

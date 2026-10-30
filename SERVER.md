@@ -23,7 +23,7 @@ Create a MySQL/MariaDB database and user, configure `database` and set the publi
 
 ## 3. Choose the PC backend
 
-1. Install PHP, Apache and MySQL/MariaDB on the PC. Deploy a compatible [LChatHost](https://github.com/leosmleol-svg/LChatHost) backend or the **same LChat files and version**; verify `.htaccess` protects private files. Configure the PC database, install tables and create the owner as above. For a monolithic LChat backend, keep its own `backend.mode = host` to avoid a proxy loop. LChatHost does not use a backend mode.
+1. Install PHP, Apache and MySQL/MariaDB on the PC. Deploy a compatible [LChatHost](https://github.com/LChatDev/LChatHost) backend or the **same LChat files and version**; verify `.htaccess` protects private files. Configure the PC database, install tables and create the owner as above. For a monolithic LChat backend, keep its own `backend.mode = host` to avoid a proxy loop. LChatHost does not use a backend mode.
 2. Make the PC PHP server accessible to the website host through a separate **HTTPS URL with a trusted certificate**, for example `https://backend.example.com/`. An appropriate HTTPS tunnel can be used. The gateway rejects HTTP and self-signed certificates. Do not expose the database port to the internet. Include any backend subdirectory in the URL.
 3. In the **website host's** config select the PC:
 
@@ -38,8 +38,8 @@ The PC's public HTTPS backend address is also reachable directly: protect the se
 
 ## Updates and troubleshooting
 
-Update PHP code and assets on the website host and PC together. Preserve private `config.php` and user data. A 502 in PC mode means the website host could not reach the PC HTTPS server: check the URL, PC, certificate, tunnel, outbound connections and PHP logs. See the [tunnel tools guide](https://github.com/leosmleol-svg/LChat/blob/main/PORT_TOOLS.md) and [calling guide](https://github.com/leosmleol-svg/LChat/blob/main/CALLS.md). License and UI-source attribution remain in this repository.
+Update PHP code and assets on the website host and PC together. Preserve private `config.php` and user data. A 502 in PC mode means the website host could not reach the PC HTTPS server: check the URL, PC, certificate, tunnel, outbound connections and PHP logs. See the [tunnel tools guide](https://github.com/LChatDev/LChat/blob/main/PORT_TOOLS.md) and [calling guide](https://github.com/LChatDev/LChat/blob/main/CALLS.md). License and UI-source attribution remain in this repository.
 
-The separated edition is available as [LChatWeb](https://github.com/leosmleol-svg/LChatWeb) and [LChatHost](https://github.com/leosmleol-svg/LChatHost). LChatHost does not serve HTML pages: in `pc` mode the site serves the interface and admin page while the backend checks actions.
+The separated edition is available as [LChatWeb](https://github.com/LChatDev/LChatWeb) and [LChatHost](https://github.com/LChatDev/LChatHost). LChatHost does not serve HTML pages: in `pc` mode the site serves the interface and admin page while the backend checks actions.
 
 The example configuration points to the project owner’s TURN server at `turn:209.25.141.16:45209?transport=tcp`. Set its secret privately in `turn.secret` or the `LCHAT_TURN_SECRET` environment variable; the repository does not contain the secret. As in the main chat, transport is set to `relay`: without the secret the TURN server is not included, so calls cannot connect in this mode. Verify the server and its relay ports; a reachable TCP listener alone does not prove calls work.
