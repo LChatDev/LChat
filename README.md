@@ -41,6 +41,8 @@ The web app checks browser cookies and PHP sessions during login. If a login ret
 - Admin panel at `admin.php` for authorized administrators
 - Bot creation through `@BotCreator`, polling and webhooks, inline buttons, and reply keyboards
 
+See [SERVER.md](SERVER.md) to choose the hosting server or a backend on your PC.
+
 ## Server settings
 
 The owner can edit the messenger name, registration, call participant limit, transport and TURN settings in `admin.php`. Saved settings override `config.php`; reset them in the panel to use config values again. TURN secrets are not returned by the admin form. Database credentials, `public_url`, session settings, STUN servers and the initial owner are configured in `config.php`. See [HOSTING.md](HOSTING.md) for precedence and multi-URL details.

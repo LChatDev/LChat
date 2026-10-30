@@ -3,6 +3,8 @@ declare(strict_types=1);
 if (!defined('LCHAT_INTERNAL')) { http_response_code(404); exit; }
 
 return [
+    // Backend: host handles requests here; pc forwards to your PC over HTTPS.
+    'backend' => ['mode' => 'host', 'url' => ''],
     'database' => [
         'dsn' => 'mysql:host=localhost;port=3306;dbname=YOUR_DATABASE;charset=utf8mb4',
         'username' => 'YOUR_DATABASE_USER',
