@@ -55,11 +55,14 @@ final class CallClient {
             try{register();}
             catch(RemoteException e){disconnected();}
         }
-        @Override public void onServiceDisconnected(ComponentName name){disconnected();}
-        @Override public void onBindingDied(ComponentName name){
-            disconnected();if(bound){app.unbindService(this);bound=false;}connect(app,api);
+        @Override public void onServiceDisconnected(ComponentName name){rebind();}
+        @Override public void onBindingDied(ComponentName name){rebind();}
+        @Override public void onNullBinding(ComponentName name){rebind();}
+        private void rebind(){
+            disconnected();
+            if(bound){try{app.unbindService(this);}catch(IllegalArgumentException ignored){}bound=false;}
+            main.postDelayed(()->{if(app!=null&&api!=null&&!bound)connect(app,api);},1000);
         }
-        @Override public void onNullBinding(ComponentName name){disconnected();}
     };
     static void connect(Context context,NativeApi client){
         if(app==null){

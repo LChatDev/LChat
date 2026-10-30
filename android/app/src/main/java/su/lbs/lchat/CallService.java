@@ -87,15 +87,15 @@ public final class CallService extends Service {
         if("input".equals(command)){int device=intent.getIntExtra("device",0);submit(()->changeInput(device));return START_NOT_STICKY;}
         if("mic".equals(command)){submit(()->{muted=!muted;if(audioTrack!=null)audioTrack.setEnabled(!muted);publish(status);});return START_NOT_STICKY;}
         if("speaker".equals(command)){submit(()->{speaker=!speaker;if(audio!=null)audio.setSpeakerphoneOn(speaker);publish(status);});return START_NOT_STICKY;}
-        if(!"start".equals(command))return START_NOT_STICKY;launching=false;if(active)return START_NOT_STICKY;
+        if(!"start".equals(command))return START_NOT_STICKY;CallDiagnostics.event("ENGINE_START_RECEIVED");launching=false;if(active)return START_NOT_STICKY;
         if(stopping||closing){ToastUtil.show(this,"Предыдущий звонок ещё завершается");return START_NOT_STICKY;}
         base=intent.getStringExtra("base");token=intent.getStringExtra("token");endpoint=intent.getStringExtra("endpoint");cookie=intent.getStringExtra("cookie");
-        if(base==null||!base.startsWith("https://")||token==null||!token.matches("[a-f0-9]{48}")||!("api.php".equals(endpoint)||"admin.php".equals(endpoint))){stopSelf();return START_NOT_STICKY;}
+        if(base==null||!base.startsWith("https://")||token==null||!token.matches("[a-f0-9]{48}")||!("api.php".equals(endpoint)||"admin.php".equals(endpoint))){CallDiagnostics.event("INVALID_CALL_REQUEST");finished=true;status="Некорректные параметры звонка";notifyUi();stopSelf();return START_NOT_STICKY;}
         active=true;callStartedMillis=System.currentTimeMillis();displayName="Голосовой звонок";muted=intent.getBooleanExtra("listen",false);speaker=false;status="Подключаемся…";
         try{
             if(Build.VERSION.SDK_INT>=30)startForeground(7,notification(status),ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);else startForeground(7,notification(status));
         }catch(Exception e){CallDiagnostics.event("FOREGROUND_FAILED",e);active=false;finished=true;status="Не разрешён доступ к микрофону в фоне";notifyUi();stopSelf();return START_NOT_STICKY;}
-        publish(status);submit(this::startCall);return START_NOT_STICKY;
+        CallDiagnostics.event("FOREGROUND_READY");publish(status);submit(this::startCall);return START_NOT_STICKY;
     }
     private Notification notification(String text){
         PendingIntent open=PendingIntent.getActivity(this,0,new Intent(this,NativeActivity.class).setAction("system-call"),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
