@@ -1,5 +1,7 @@
 # Free tunnel and private networking tools
 
+For step-by-step setup and controls, see [PORT_TOOLS.md](PORT_TOOLS.md).
+
 | Tool | Use | Free-plan limitations |
 | --- | --- | --- |
 | [Cloudflare Tunnel](https://developers.cloudflare.com/tunnel/) | Publish a local website over HTTPS without opening inbound ports. | Suitable for the website; do not assume it exposes the UDP relay port range required by TURN. |
