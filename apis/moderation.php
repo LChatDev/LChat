@@ -54,7 +54,7 @@ function moderation_action(string $action, array $data, array $user): void {
     if ($action === 'chat.send') {
         $chatId = (int)($data['chat_id'] ?? 0);
         if (!one('SELECT id FROM chats WHERE id = ?', [$chatId])) fail(404, 'Chat not found.');
-        $body = field($data, 'body', 1, 4000); $nonce = field($data, 'nonce', 16, 64);
+        $body = message_text($data); $nonce = field($data, 'nonce', 16, 64);
         if (!preg_match('/^[a-zA-Z0-9_-]+$/D', $nonce)) fail(422, 'Invalid message identifier.');
         $sentMessageId = transaction(function() use ($chatId, $body, $nonce, $user): int {
             admin_lock((int)$user['id']);
