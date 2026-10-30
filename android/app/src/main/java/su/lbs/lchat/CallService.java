@@ -143,7 +143,7 @@ public final class CallService extends Service {
     }
     private JSONObject api(String action,JSONObject data)throws Exception{return request(endpoint,action,data);}
     private JavaAudioDeviceModule createAudioDevice(){
-        boolean hardwareEffects=Build.VERSION.SDK_INT>28;
+        boolean hardwareEffects=Build.VERSION.SDK_INT>28&&!"samsung".equalsIgnoreCase(Build.MANUFACTURER);
         CallDiagnostics.event(hardwareEffects?"AUDIO_EFFECTS_HARDWARE":"AUDIO_EFFECTS_SOFTWARE");
         return JavaAudioDeviceModule.builder(this)
             .setUseHardwareAcousticEchoCanceler(hardwareEffects).setUseHardwareNoiseSuppressor(hardwareEffects)

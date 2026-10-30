@@ -32,7 +32,7 @@ final class CrashTrace {
         for(Field entry:top)if(entry.number==16&&entry.bytes!=null){
             long tid=-2;byte[] thread=null;for(Field item:fields(entry.bytes)){if(item.number==1&&item.wire==0)tid=item.value;if(item.number==2&&item.bytes!=null)thread=item.bytes;}
             if(tid!=crashTid||thread==null)continue;int count=0;
-            for(Field frame:fields(thread))if(frame.number==4&&frame.bytes!=null){String function="",file="";for(Field part:fields(frame.bytes)){if(part.number==4&&part.bytes!=null)function=safe(part.bytes);if(part.number==6&&part.bytes!=null){file=safe(part.bytes);int slash=file.lastIndexOf('/');if(slash>=0)file=file.substring(slash+1);}}if(!function.isEmpty()||!file.isEmpty()){report.append("  ").append(file).append(" ").append(function).append('\n');if(++count==8)break;}}
+            for(Field frame:fields(thread))if(frame.number==4&&frame.bytes!=null){String function="",file="";long relative=0;for(Field part:fields(frame.bytes)){if(part.number==1&&part.wire==0)relative=part.value;if(part.number==4&&part.bytes!=null)function=safe(part.bytes);if(part.number==6&&part.bytes!=null){file=safe(part.bytes);int slash=file.lastIndexOf('/');if(slash>=0)file=file.substring(slash+1);}}if(!function.isEmpty()||!file.isEmpty()){report.append("  ").append(file).append(" +0x").append(Long.toHexString(relative)).append(" ").append(function).append('\n');if(++count==12)break;}}
             break;
         }
         return report.length()==0?"Текст аварии недоступен":report.toString().trim();
