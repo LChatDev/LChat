@@ -23,15 +23,15 @@ Create a MySQL/MariaDB database and user, configure `database` and set the publi
 
 ## 3. Choose the PC backend
 
-1. Install PHP, Apache and MySQL/MariaDB on the PC. Deploy the **same LChat files and version**; verify `.htaccess` protects private files. Configure the PC database, install tables and create the owner as above. Keep the PC's own config at `'backend' => ['mode' => 'host', 'url' => '']` to avoid a proxy loop.
+1. Install PHP, Apache and MySQL/MariaDB on the PC. Deploy a compatible [LChatHost](https://github.com/leosmleol-svg/LChatHost) backend or the **same LChat files and version**; verify `.htaccess` protects private files. Configure the PC database, install tables and create the owner as above. For a monolithic LChat backend, keep its own `backend.mode = host` to avoid a proxy loop. LChatHost does not use a backend mode.
 2. Make the PC PHP server accessible to the website host through a separate **HTTPS URL with a trusted certificate**, for example `https://backend.example.com/`. An appropriate HTTPS tunnel can be used. The gateway rejects HTTP and self-signed certificates. Do not expose the database port to the internet. Include any backend subdirectory in the URL.
 3. In the **website host's** config select the PC:
 
    ```php
-   'backend' => ['mode' => 'pc', 'url' => 'https://backend.example.com/'],
+   'backend' => ['mode' => 'pc', 'url' => 'https://backend.example.com/', 'proxy_secret' => 'YOUR_SHARED_RANDOM_SECRET'],
    ```
 
-   Replace the address. The website host does not need an application database in this mode; PHP `curl` is required. The PC database and `data/` and `files/` must be accessible to PHP. The gateway supports regular GET/POST requests and uploads up to 10 MB; the application's attachment limit is 8 MB.
+   Replace the address and set a shared random secret: the website’s `backend.proxy_secret` must match the backend’s top-level `proxy_secret` (at least 32 characters without whitespace). Generate one with `php -r "echo bin2hex(random_bytes(32));"`. Existing `pc` installations must add the secret to both configs when upgrading. The website host does not need an application database in this mode; PHP `curl` is required. The PC database and `data/` and `files/` must be accessible to PHP. The gateway supports regular GET/POST requests and uploads up to 10 MB; the application's attachment limit is 8 MB.
 4. In the **PC** config set `public_url` to the public website address and leave `session_domain` empty. Start the PC and tunnel and open the public HTTPS website. Test registration, login, file upload and a call from two devices.
 
 The PC's public HTTPS backend address is also reachable directly: protect the server and follow the application's access controls. Keep configs and tunnel tokens secret. Remove the installer on the PC after setup. The proxy is not a TURN server; calls across networks may need a separate TURN service with reachable UDP relay ports. Configure `turn` and `call_transport` in the **PC** config.
@@ -39,3 +39,5 @@ The PC's public HTTPS backend address is also reachable directly: protect the se
 ## Updates and troubleshooting
 
 Update PHP code and assets on the website host and PC together. Preserve private `config.php` and user data. A 502 in PC mode means the website host could not reach the PC HTTPS server: check the URL, PC, certificate, tunnel, outbound connections and PHP logs. See the [tunnel tools guide](https://github.com/leosmleol-svg/LChat/blob/main/PORT_TOOLS.md) and [calling guide](https://github.com/leosmleol-svg/LChat/blob/main/CALLS.md). License and UI-source attribution remain in this repository.
+
+The separated edition is available as [LChatWeb](https://github.com/leosmleol-svg/LChatWeb) and [LChatHost](https://github.com/leosmleol-svg/LChatHost). LChatHost does not serve HTML pages: in `pc` mode the site serves the interface and admin page while the backend checks actions.

@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 define('LCHAT_INTERNAL', true);
+require_once __DIR__ . '/apis/frontend_mode.php';
+if (!isset($_GET['api']) && frontend_is_remote()) { require __DIR__ . '/install-pc.php'; exit; }
 require __DIR__ . '/app.php';
 header('Cache-Control: no-store');
 header('X-Frame-Options: DENY');
@@ -22,6 +24,7 @@ try {
     error_log('LChat install: ' . $e->getMessage());
     $error = $e instanceof RuntimeException && !($e instanceof PDOException) ? $e->getMessage() : 'Could not connect to the database or create tables. Check the settings and PHP log.';
 }
+if (isset($_GET['api'])) { if ($error !== '') fail(503, $error); result(['done' => $done]); }
 ?>
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Setup · LChat</title><link rel="stylesheet" href="assets/style.css"><link rel="stylesheet" href="assets/theme.css?v=20261013-dark1"><link rel="stylesheet" href="assets/details.css?v=20261014"><link rel="stylesheet" href="assets/aurora.css?v=20261026-aurora1"><link rel="stylesheet" href="assets/weba-pages.css?v=20261029-weba2"></head>
 <body class="install-body"><main class="install-card"><span class="brand-mark">L</span><h1>LChat setup</h1>
