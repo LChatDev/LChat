@@ -76,3 +76,5 @@ The repository ignores `config.php`, local auth configuration, runtime data, and
 - Бесплатный домен / Free hostname: [Русский](FREE_DOMAIN_RU.md) · [English](FREE_DOMAIN_EN.md)
 
 Message text: up to **10 MiB in UTF-8**. Back up your database before upgrading: the MySQL migration widens message and bot-update columns. Check PHP and web-server request limits and MySQL `max_allowed_packet` (at least 32 MiB). Attachment limits are separate.
+
+Animated emoji and attribution: [EMOJI.md](EMOJI.md).
