@@ -75,11 +75,20 @@ function stopChatPolling(){clearTimeout(pollTimer);clearTimeout(messageTimer);st
 function setAuth(mode){authMode=mode;const register=mode==='register';show('register-fields',register);show('login-field',!register);show('password-hint',register);$('login-tab').classList.toggle('active',!register);$('register-tab').classList.toggle('active',register);$('auth-title').textContent=register?'We should get acquainted':'Welcome back';$('auth-subtitle').textContent=register?'Create an account and find your people.':'Sign in to continue the conversation.';$('auth-submit').textContent=register?'Create an account →':'Sign in →';
   const form=$('auth-form');['name','username','email'].forEach(k=>{form.elements[k].required=register;form.elements[k].disabled=!register;});form.elements.login.required=!register;form.elements.login.disabled=register;form.elements.password.autocomplete=register?'new-password':'current-password';show('auth-error',false);
 }
-on('login-tab','click',()=>setAuth('login'));on('register-tab','click',()=>setAuth('register'));
+on('login-tab','click',()=>setAuth('login'));on('register-tab','click',()=>{$('registration-success').hidden=true;setAuth('register');});
 on('show-password','click',()=>{const i=$('auth-form').elements.password;i.type=i.type==='password'?'text':'password';$('show-password').setAttribute('aria-label',i.type==='password'?'Show password':'Hide password');});
 function authError(error){$('auth-error').textContent=error.message||'Could not sign in. Try again.';show('auth-error');}
 $('auth-form').addEventListener('invalid',e=>{authError(new Error(e.target.validationMessage||'Check the form fields.'));},true);
-on('auth-form','submit',async e=>{e.preventDefault();if(authBusy)return;authBusy=true;const mode=authMode,payload=Object.fromEntries(new FormData(e.target));$('login-tab').disabled=true;$('register-tab').disabled=true;clearTimeout(reconnectTimer);stopChatPolling();const b=$('auth-submit');b.disabled=true;show('auth-error',false);try{const before=await api('me');csrf=before.csrf;await api(mode,payload,true);const session=await api('me');if(!session.user)throw new Error('Your login was not saved. Allow cookies for this site. If cookies are enabled, check PHP session storage on the server.');csrf=session.csrf;await boot(session);e.target.reset();}catch(e){view('auth');authError(e);}finally{authBusy=false;b.disabled=false;$('login-tab').disabled=false;$('register-tab').disabled=false;}});
+on('auth-form','submit',async e=>{e.preventDefault();if(authBusy)return;authBusy=true;const mode=authMode,payload=Object.fromEntries(new FormData(e.target));$('login-tab').disabled=true;$('register-tab').disabled=true;clearTimeout(reconnectTimer);stopChatPolling();const b=$('auth-submit');b.disabled=true;show('auth-error',false);try{const before=await api('me');csrf=before.csrf;const response=await api(mode,payload,true);if(mode==='register'&&response.verification_required){
+      e.target.reset();
+      setAuth('login');
+      e.target.elements.login.value=payload.email;
+      const notice=$('registration-success');
+      notice.textContent='We sent a confirmation email. Open the link in the email and confirm your address before signing in. Check Spam if you do not see it.';
+      notice.hidden=false;
+      notice.focus();
+      return;
+    }const session=await api('me');if(!session.user)throw new Error('Your login was not saved. Allow cookies for this site. If cookies are enabled, check PHP session storage on the server.');csrf=session.csrf;await boot(session);e.target.reset();}catch(e){view('auth');authError(e);}finally{authBusy=false;b.disabled=false;$('login-tab').disabled=false;$('register-tab').disabled=false;}});
 async function boot(verifiedSession=null){
   clearTimeout(reconnectTimer);
   stopChatPolling();
