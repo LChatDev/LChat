@@ -9,6 +9,12 @@ The base endpoint is `https://chat.lbs.su/bot-api.php?method=METHOD`. Set the `A
 | Method | Purpose |
 | --- | --- |
 | `getMe`, `getChat` | Read bot and accessible chat information. |
+| `getChats` | GET `after, limit`. List the bot’s chats. Pass the last ID as after for the next page. |
+| `getChatMemberCount` | GET `chat_id`. Count participants. |
+| `getChatMember` | GET `chat_id, user_id`. Read a participant and their role. |
+| `getMessage` | GET `chat_id, message_id`. Read a message sent after the bot joined. |
+| `setMessageReaction` | POST `chat_id, message_id, emoji`. Set 👍 ❤️ 😂 😮 😢 or 👏. Use null to clear the reaction. |
+| `editMessageCaption` | POST `chat_id, message_id, caption`. Edit the bot’s media caption. Up to 1024 characters. An empty string clears it. |
 | `getUpdates` | Poll messages and callback queries; use `offset` and `limit`. |
 | `setWebhook`, `deleteWebhook`, `getWebhookInfo` | Manage an HTTPS webhook. |
 | `sendMessage` | Send text, inline buttons, or a reply keyboard. |
@@ -49,3 +55,11 @@ curl -H "Authorization: Bearer YOUR_TOKEN" -F "chat_id=123" -F "document=@photo.
 Webhooks require a public HTTPS URL. When setting a webhook, you can provide `secret_token`; verify the `X-Telegram-Bot-Api-Secret-Token` header in your receiver. The site attempts delivery through cURL after requests. For retries when there is no new site traffic, run `php tools/bot-webhook-worker.php` with cron.
 
 Files are limited to 8 MB, with a 200 MB bot storage limit. LChat implements the methods listed above, not the full Telegram Bot API. Payments, stickers, and many other Telegram methods are unavailable.
+
+### Read a message and react
+
+```text
+GET /bot-api.php?method=getMessage&chat_id=123&message_id=456
+POST /bot-api.php?method=setMessageReaction
+{"chat_id":123,"message_id":456,"emoji":"👍"}
+```
