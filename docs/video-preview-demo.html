@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Video preview in LChat — demo</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#1a1d23;display:flex;justify-content:center;padding:40px 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#e8eaed}
+.chat{max-width:420px;width:100%;background:#22262e;border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.message{display:flex;gap:10px;align-items:flex-start}
+.avatar{width:36px;height:36px;border-radius:50%;background:#7c5cfc;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0}
+.bubble{background:#2b2f38;border-radius:6px 16px 16px 16px;padding:8px 14px;max-width:85%;display:flex;flex-direction:column;gap:4px}
+.name{font-size:12px;color:#7c5cfc;font-weight:600}
+.text{font-size:14px;line-height:1.4;color:#e8eaed;word-break:break-word}
+.video{display:block;max-width:100%;border-radius:12px;margin:2px 0;max-height:400px;background:#000;width:320px;height:180px;object-fit:cover;background:linear-gradient(135deg,#2a2e3a,#1a1d23);cursor:pointer;position:relative;overflow:hidden;border:0}
+.video::before{content:'▶';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:48px;color:#fff;opacity:.8}
+.meta{display:flex;justify-content:space-between;gap:6px;font-size:11px;color:#9aa0a8;margin:1px 0;padding:0 4px}
+.meta small{opacity:.75}
+.time{font-size:11px;color:#5e6470;margin-left:auto;white-space:nowrap}
+.attachment-link{font-size:13px;color:#7c5cfc;text-decoration:none;padding:2px 0;display:block}
+.attachment-link:hover{text-decoration:underline}
+.small-note{text-align:center;color:#5e6470;font-size:12px;margin-top:8px;padding-top:12px;border-top:1px solid #2b2f38}
+</style>
+</head><body>
+<div class="chat">
+
+  <!-- Voice message (existing) -->
+  <div class="message"><div class="avatar">А</div>
+    <div class="bubble"><span class="name">Анна</span>
+      <audio class="voice-player" controls preload="none" style="width:200px;height:36px">voice message</audio>
+      <small style="font-size:11px;color:#9aa0a8">12 сек voice message</small>
+      <span class="time">14:23</span>
+    </div>
+  </div>
+
+  <!-- Video message (NEW) -->
+  <div class="message"><div class="avatar">М</div>
+    <div class="bubble"><span class="name">Максим</span>
+      <div class="video" role="img" aria-label="demo.mp4">▶</div>
+      <div class="meta"><span>demo.mp4</span><small>2.45 МБ</small></div>
+      <span class="time">14:25</span>
+    </div>
+  </div>
+
+  <!-- Regular file (unchanged) -->
+  <div class="message"><div class="avatar">К</div>
+    <div class="bubble"><span class="name">Катя</span>
+      <a class="attachment-link" href="#">документ.pdf · 1.20 МБ</a>
+      <span class="time">14:27</span>
+    </div>
+  </div>
+
+  <div class="small-note">✅ Видео — инлайн с контролами, файл — ссылкой скачивания</div>
+</div>
+</body></html>
