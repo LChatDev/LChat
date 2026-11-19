@@ -47,12 +47,12 @@ function bot_platform_markup(mixed $input): ?string {
                 continue;
             }
             $hasData = isset($button['callback_data']); $hasUrl = isset($button['url']);
-            if ($hasData === $hasUrl) throw new DomainException('A button needs callback_data or a URL.');
+            if ($hasData === $hasUrl) throw new DomainException('The button needs callback_data or URL.');
             if ($hasData) {
-                if (!is_string($button['callback_data']) || strlen($button['callback_data']) < 1 || strlen($button['callback_data']) > 64) throw new DomainException('callback_data: 1 to 64 bytes.');
+                if (!is_string($button['callback_data']) || strlen($button['callback_data']) < 1 || strlen($button['callback_data']) > 64) throw new DomainException('callback_data: from 1 to 64 bytes.');
                 $buttons[] = ['text' => trim($button['text']), 'callback_data' => $button['callback_data']];
             } else {
-                if (!is_string($button['url']) || !filter_var($button['url'], FILTER_VALIDATE_URL) || parse_url($button['url'], PHP_URL_SCHEME) !== 'https') throw new DomainException('Button URL must use HTTPS.');
+                if (!is_string($button['url']) || !filter_var($button['url'], FILTER_VALIDATE_URL) || parse_url($button['url'], PHP_URL_SCHEME) !== 'https') throw new DomainException('URL buttons must be used HTTPS.');
                 $buttons[] = ['text' => trim($button['text']), 'url' => $button['url']];
             }
         }
@@ -129,18 +129,18 @@ function bot_platform_publish_callback(int $botId, string $callbackId): void {
 }
 
 function bot_platform_webhook_target(string $url): array {
-    if (strlen($url) > 2048 || !filter_var($url, FILTER_VALIDATE_URL)) throw new DomainException('Enter a valid HTTPS webhook URL.');
+    if (strlen($url) > 2048 || !filter_var($url, FILTER_VALIDATE_URL)) throw new DomainException('Please indicate the correct HTTPS-webhook address.');
     $parts = parse_url($url);
     $host = strtolower((string)($parts['host'] ?? ''));
     $port = (int)($parts['port'] ?? 443);
-    if (($parts['scheme'] ?? '') !== 'https' || !in_array($port, [443, 8443], true) || isset($parts['user']) || isset($parts['pass']) || isset($parts['fragment']) || !preg_match('/^[a-z0-9.-]{4,253}$/D', $host) || !str_contains($host, '.') || filter_var($host, FILTER_VALIDATE_IP)) throw new DomainException('Webhook must use a public HTTPS domain on port 443 or 8443.');
+    if (($parts['scheme'] ?? '') !== 'https' || !in_array($port, [443, 8443], true) || isset($parts['user']) || isset($parts['pass']) || isset($parts['fragment']) || !preg_match('/^[a-z0-9.-]{4,253}$/D', $host) || !str_contains($host, '.') || filter_var($host, FILTER_VALIDATE_IP)) throw new DomainException('Webhook must be public HTTPS-domain on port 443 or 8443.');
     $records = dns_get_record($host, DNS_A);
-    if (!is_array($records)) throw new DomainException('Could not check the webhook DNS.');
+    if (!is_array($records)) throw new DomainException('Failed to check DNS webhook.');
     foreach ($records as $record) {
         $ip = $record['ip'] ?? '';
         if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) return [$host, $port, $ip];
     }
-    throw new DomainException('Webhook domain must have a public IPv4 address.');
+    throw new DomainException('The webhook domain must be public IPv4-address.');
 }
 
 function bot_platform_schedule_dispatch(): void {

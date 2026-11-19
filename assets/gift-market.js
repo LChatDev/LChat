@@ -12,5 +12,5 @@
   for(const card of cards)card.addEventListener('submit',event=>{event.preventDefault();confirm.elements.gift.value=card.elements.gift.value;confirm.elements.nonce.value=card.elements.nonce.value;document.getElementById('gift-title').textContent=card.dataset.title;document.getElementById('gift-cost').textContent=card.dataset.price;preview.replaceChildren(card.querySelector('.gift-art').cloneNode(true));dialog.showModal();});
   dialog.querySelector('.dialog-close').addEventListener('click',()=>dialog.close());
   dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});
-  confirm.addEventListener('submit',()=>{const b=confirm.querySelector('.confirm-gift');b.disabled=true;b.textContent='Sending…';});
+  confirm.addEventListener('submit',()=>{const b=confirm.querySelector('.confirm-gift');b.disabled=true;b.textContent='Sending……';});
 })();

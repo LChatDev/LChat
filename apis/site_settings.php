@@ -32,20 +32,20 @@ function site_settings(): array {
 
 function site_settings_validate(array $data): array {
     $name = trim(is_string($data['site_name'] ?? null) ? $data['site_name'] : '');
-    if ($name === '' || mb_strlen($name, 'UTF-8') > 60 || strlen($name) > 240 || preg_match('/[\x00-\x1f\x7f]/', $name)) throw new DomainException('Name must be 1–60 characters, without control characters.');
-    if (!is_bool($data['registration_open'] ?? null)) throw new DomainException('Invalid registration setting.');
+    if ($name === '' || mb_strlen($name, 'UTF-8') > 60 || strlen($name) > 240 || preg_match('/[\x00-\x1f\x7f]/', $name)) throw new DomainException('The name must contain 1–60 characters without control characters.');
+    if (!is_bool($data['registration_open'] ?? null)) throw new DomainException('Invalid registration value.');
     $limit = filter_var($data['max_call_participants'] ?? null, FILTER_VALIDATE_INT);
-    if ($limit === false || $limit < 2 || $limit > 16) throw new DomainException('Call limit must be between 2 and 16.');
+    if ($limit === false || $limit < 2 || $limit > 16) throw new DomainException('The limit of participants must be from 2 to 16.');
     $transport = $data['call_transport'] ?? '';
-    if (!in_array($transport, ['all', 'relay'], true)) throw new DomainException('Invalid call transport.');
+    if (!in_array($transport, ['all', 'relay'], true)) throw new DomainException('Incorrect call route.');
     $urls = trim(is_string($data['turn_urls'] ?? null) ? $data['turn_urls'] : '');
-    if (strlen($urls) > 240 || ($urls !== '' && !preg_match('/^turns?:[^\s,]+$/iD', $urls))) throw new DomainException('Enter one valid TURN URL, for example turn:turn.example.com:3478?transport=udp.');
+    if (strlen($urls) > 240 || ($urls !== '' && !preg_match('/^turns?:[^\s,]+$/iD', $urls))) throw new DomainException('Provide one address TURN, for example turn:turn.example.com:3478?transport=udp.');
     $ttl = filter_var($data['turn_ttl'] ?? null, FILTER_VALIDATE_INT);
-    if ($ttl === false || $ttl < 300 || $ttl > 86400) throw new DomainException('TURN credential lifetime must be 300–86400 seconds.');
+    if ($ttl === false || $ttl < 300 || $ttl > 86400) throw new DomainException('Validity period TURN must be between 300 and 86400 seconds.');
     $secret = $data['turn_secret'] ?? '';
-    if (!is_string($secret) || strlen($secret) > 240 || preg_match('/[\x00-\x1f\x7f]/', $secret)) throw new DomainException('Invalid TURN secret.');
+    if (!is_string($secret) || strlen($secret) > 240 || preg_match('/[\x00-\x1f\x7f]/', $secret)) throw new DomainException('Wrong secret TURN.');
     $existingSecret = site_settings()['turn']['secret'];
-    if ($transport === 'relay' && ($urls === '' || ($secret === '' && $existingSecret === ''))) throw new DomainException('Relay-only mode requires a TURN URL and secret.');
+    if ($transport === 'relay' && ($urls === '' || ($secret === '' && $existingSecret === ''))) throw new DomainException('For mode only TURN address and secret needed TURN.');
     $values = ['site_name' => $name, 'registration_open' => $data['registration_open'] ? '1' : '0', 'max_call_participants' => (string)$limit, 'call_transport' => $transport, 'turn_urls' => $urls, 'turn_ttl' => (string)$ttl];
     if ($secret !== '') $values['turn_secret'] = $secret;
     return $values;

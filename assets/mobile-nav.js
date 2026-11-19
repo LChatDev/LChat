@@ -6,50 +6,50 @@
   const mobile = matchMedia('(max-width: 760px)');
   const english = document.documentElement.lang === 'en';
   const labels = {
-    "Основная навигация": "Main navigation",
-    "Чаты": "Chats",
-    "Контакты": "Contacts",
-    "Настройки": "Settings",
-    "Профиль": "Profile",
-    "Назад к чатам": "Back to chats",
-    "Войдите в аккаунт.": "Sign in to your account.",
-    "Найти человека": "Find someone",
-    "По логину": "By username",
-    "Пригласить друзей": "Invite friends",
-    "Ссылка на LChat": "LChat link",
-    "Ссылка скопирована": "Link copied",
-    "Здесь появятся люди из ваших личных чатов.": "People from your direct chats will appear here.",
-    "Чат не найден": "Chat not found",
-    "В звонке": "In a call",
-    "Не удалось загрузить контакты.": "Could not load contacts.",
-    "Аккаунт и оформление": "Account and appearance",
-    "Имя, описание, тема и цвет": "Name, bio, theme and color",
-    "Звуки уведомлений": "Notification sounds",
-    "Переключить звуки сообщений и звонков": "Toggle sounds for messages and calls",
-    "Мои боты": "My bots",
-    "Управление ботами": "Manage bots",
-    "Платёжная система пока не подключена": "Payments are unavailable",
-    "Подарки и тикеты": "Gifts and tickets",
-    "Коллекция и отправка подарков": "Collect and send gifts",
-    "Приложение": "App",
-    "Версии для Android": "Android releases",
-    "Поддержка": "Support",
-    "Написать в поддержку": "Contact support",
-    "Политика конфиденциальности": "Privacy policy",
-    "Пользовательское соглашение": "Terms of use",
-    "Документация Bot API": "Bot API documentation",
-    "Выбрать фото": "Choose photo",
-    "Изменить": "Edit",
-    "Имя пользователя": "Username",
-    "Подарки 🎁": "Gifts 🎁",
-    "Загружаем подарки…": "Loading gifts…",
-    "Открыть подарки и тикеты": "Open gifts and tickets",
-    "Не удалось загрузить профиль.": "Could not load the profile.",
-    "О себе": "Bio",
-    "Показаны последние 100 подарков. Остальные — в коллекции.": "Showing the latest 100 gifts. See the collection for more.",
-    "Не удалось загрузить подарки.": "Could not load gifts.",
-    "непрочитанных": "unread",
-    "У вас пока нет подарков.": "No gifts yet.",
+    "Basic navigation": "Main navigation",
+    "Chats": "Chats",
+    "Contacts": "Contacts",
+    "Settings": "Settings",
+    "Profile": "Profile",
+    "Back to chats": "Back to chats",
+    "Log in to your account.": "Sign in to your account.",
+    "Find person": "Find someone",
+    "By login": "By username",
+    "Invite friends": "Invite friends",
+    "Link to LChat": "LChat link",
+    "Link copied": "Link copied",
+    "People from your personal chats will appear here.": "People from your direct chats will appear here.",
+    "Chat not found": "Chat not found",
+    "In a call": "In a call",
+    "Failed to load contacts.": "Could not load contacts.",
+    "Account and registration": "Account and appearance",
+    "Name, description, theme and color": "Name, bio, theme and color",
+    "Notification sounds": "Notification sounds",
+    "Toggle message and call sounds": "Toggle sounds for messages and calls",
+    "My bots": "My bots",
+    "Bot management": "Manage bots",
+    "Payment system is not connected yet": "Payments are unavailable",
+    "Gifts and tickets": "Gifts and tickets",
+    "Collection and sending of gifts": "Collect and send gifts",
+    "Appendix": "App",
+    "Versions for Android": "Android releases",
+    "Support": "Support",
+    "Write to support": "Contact support",
+    "Privacy Policy": "Privacy policy",
+    "User Agreement": "Terms of use",
+    "Documentation Bot API": "Bot API documentation",
+    "Select photo": "Choose photo",
+    "Edit": "Edit",
+    "Username": "Username",
+    "Gifts 🎁": "Gifts 🎁",
+    "Loading gifts…": "Loading gifts…",
+    "Open gifts and tickets": "Open gifts and tickets",
+    "Failed to load profile.": "Could not load the profile.",
+    "About": "Bio",
+    "Shows the last 100 gifts. The rest are in the collection.": "Showing the latest 100 gifts. See the collection for more.",
+    "Failed to load gifts.": "Could not load gifts.",
+    "unread": "unread",
+    "You don’t have any gifts yet.": "No gifts yet.",
   };
   const t = label => english ? (labels[label] ?? label) : label;
   const icons = {
@@ -59,9 +59,9 @@
     settings: '<path d="M9.8 2.8h4.4l.5 2a8 8 0 0 1 1.5.9l2-.6 2.2 3.8-1.5 1.5a8 8 0 0 1 0 1.8l1.5 1.5-2.2 3.8-2-.6a8 8 0 0 1-1.5.9l-.5 2H9.8l-.5-2a8 8 0 0 1-1.5-.9l-2 .6-2.2-3.8 1.5-1.5a8 8 0 0 1 0-1.8L3.6 8.9l2.2-3.8 2 .6a8 8 0 0 1 1.5-.9z"/><circle cx="12" cy="11.3" r="2.8"/>',
     profile: '<circle cx="12" cy="8" r="3.5"/><path d="M5.5 20c.2-4 2.8-6 6.5-6s6.3 2 6.5 6"/>'
   };
-  const nav = document.createElement('nav'); nav.className = 'mobile-nav'; nav.setAttribute('aria-label', t('Основная навигация'));
+  const nav = document.createElement('nav'); nav.className = 'mobile-nav'; nav.setAttribute('aria-label', t('Basic navigation'));
   const buttons = {};
-  for (const [id, label] of [['chats',t('Чаты')],['contacts',t('Контакты')],['settings',t('Настройки')],['profile',t('Профиль')]]) {
+  for (const [id, label] of [['chats',t('Chats')],['contacts',t('Contacts')],['settings',t('Settings')],['profile',t('Profile')]]) {
     const button=document.createElement('button'); button.type='button'; button.className='mobile-nav-item'; button.dataset.nav=id;
     const glyph=document.createElement('span'); glyph.className='mobile-nav-icon';
     glyph.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[id]}</svg>`;
@@ -69,7 +69,7 @@
   }
   buttons.chats.classList.add('active'); buttons.chats.setAttribute('aria-current','page');
   const badge=document.createElement('span'); badge.className='mobile-nav-badge'; badge.hidden=true; buttons.chats.querySelector('.mobile-nav-icon').append(badge);
-  const updateUnread=()=>{let count=0; document.querySelectorAll('#chat-list .unread').forEach(el=>{const n=parseInt(el.textContent,10); if(Number.isFinite(n))count+=n;}); badge.textContent=count>99?'99+':String(count);badge.hidden=!count; buttons.chats.setAttribute('aria-label',count?`${t('Чаты')}, ${t('непрочитанных')}: ${count>99?'99+':count}`:t('Чаты'));};
+  const updateUnread=()=>{let count=0; document.querySelectorAll('#chat-list .unread').forEach(el=>{const n=parseInt(el.textContent,10); if(Number.isFinite(n))count+=n;}); badge.textContent=count>99?'99+':String(count);badge.hidden=!count; buttons.chats.setAttribute('aria-label',count?`${t('Chats')}, ${t('unread')}: ${count>99?'99+':count}`:t('Chats'));};
   const list=document.getElementById('chat-list'); if(list)new MutationObserver(updateUnread).observe(list,{childList:true,subtree:true,characterData:true}); updateUnread();
   const profile=document.getElementById('profile-button');
   const updateProfile=()=>{const slot=buttons.profile.querySelector('.mobile-nav-icon');slot.querySelector('img')?.remove();const photo=profile?.querySelector('img');if(photo){const image=photo.cloneNode();image.alt='';image.onerror=()=>image.remove();slot.append(image);}};
@@ -126,41 +126,41 @@
     const heading = el('header', 'mobile-screen-heading');
     const back = el('button', 'mobile-screen-back');
     back.type = 'button';
-    back.setAttribute('aria-label', t('Назад к чатам'));
+    back.setAttribute('aria-label', t('Back to chats'));
     back.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons.back}</svg>`;
     back.addEventListener('click', () => showChats(true));
-    const title = el('h2', 'mobile-screen-title', id === 'contacts' ? t('Контакты') : id === 'settings' ? t('Настройки') : t('Профиль'));
+    const title = el('h2', 'mobile-screen-title', id === 'contacts' ? t('Contacts') : id === 'settings' ? t('Settings') : t('Profile'));
     title.id = 'mobile-screen-title';
     screen.setAttribute('aria-labelledby', title.id);
     heading.append(back, title);
     const contentBody = el('div', 'mobile-screen-enter');
     screen.append(heading, contentBody);
-    const app=window.LChat,user=app?.getUser();if(!app||!user){contentBody.append(el('p','mobile-screen-note',t('Войдите в аккаунт.')));return;}
+    const app=window.LChat,user=app?.getUser();if(!app||!user){contentBody.append(el('p','mobile-screen-note',t('Log in to your account.')));return;}
     if(id==='contacts'){
-      const shortcuts=card();shortcuts.append(row('＋',t('Найти человека'),t('По логину'),()=>modalTarget('new-chat')),row('↗',t('Пригласить друзей'),t('Ссылка на LChat'),async()=>{try{await navigator.clipboard.writeText(location.origin+'/');app.toast(t('Ссылка скопирована'));}catch{app.modal(t('Ссылка на LChat'),body=>{const input=el('input');input.value=location.origin+'/';input.readOnly=true;body.append(input);});}}));contentBody.append(shortcuts);
-      const content=card();content.append(el('h3','mobile-card-title',t('Контакты')));contentBody.append(content);
-      try {const data=await app.api('contacts');if(serial!==generation)return;const contacts=data.contacts||[];if(!contacts.length)content.append(el('p','mobile-screen-note',t('Здесь появятся люди из ваших личных чатов.')));for(const person of contacts){const entry=row('','', '',async()=>{try{await app.refreshChats();const chat=app.getChats().find(c=>Number(c.id)===Number(person.chat_id));if(!chat)throw new Error(t('Чат не найден'));showChats();await app.selectChat(chat);}catch(e){app.report(e);}});entry.querySelector('.mobile-row-icon').replaceWith(app.avatar(person.name,person.id));const info=entry.querySelector('.mobile-row-info');info.replaceChildren(el('strong','',person.name),el('small','',person.in_call?t('В звонке'):'@'+person.username));content.append(entry);}}catch(e){if(serial===generation)content.append(el('p','mobile-screen-note',e.message||t('Не удалось загрузить контакты.')));}return;
+      const shortcuts=card();shortcuts.append(row('＋',t('Find person'),t('By login'),()=>modalTarget('new-chat')),row('↗',t('Invite friends'),t('Link to LChat'),async()=>{try{await navigator.clipboard.writeText(location.origin+'/');app.toast(t('Link copied'));}catch{app.modal(t('Link to LChat'),body=>{const input=el('input');input.value=location.origin+'/';input.readOnly=true;body.append(input);});}}));contentBody.append(shortcuts);
+      const content=card();content.append(el('h3','mobile-card-title',t('Contacts')));contentBody.append(content);
+      try {const data=await app.api('contacts');if(serial!==generation)return;const contacts=data.contacts||[];if(!contacts.length)content.append(el('p','mobile-screen-note',t('People from your personal chats will appear here.')));for(const person of contacts){const entry=row('','', '',async()=>{try{await app.refreshChats();const chat=app.getChats().find(c=>Number(c.id)===Number(person.chat_id));if(!chat)throw new Error(t('Chat not found'));showChats();await app.selectChat(chat);}catch(e){app.report(e);}});entry.querySelector('.mobile-row-icon').replaceWith(app.avatar(person.name,person.id));const info=entry.querySelector('.mobile-row-info');info.replaceChildren(el('strong','',person.name),el('small','',person.in_call?t('In a call'):'@'+person.username));content.append(entry);}}catch(e){if(serial===generation)content.append(el('p','mobile-screen-note',e.message||t('Failed to load contacts.')));}return;
     }
     const hero=el('div','mobile-screen-hero');hero.append(app.avatar(user.name,user.id),el('h2','',user.name),el('p','mobile-screen-note','@'+user.username));contentBody.append(hero);
     if(id==='settings'){
-      const settings=card();settings.append(row('👤',t('Аккаунт и оформление'),t('Имя, описание, тема и цвет'),()=>modalTarget('settings-button')),row('🔔',t('Звуки уведомлений'),t('Переключить звуки сообщений и звонков'),()=>modalTarget('notification-button')),row('🤖',t('Мои боты'),t('Управление ботами'),()=>modalTarget('bots-button')));contentBody.append(settings);
+      const settings=card();settings.append(row('👤',t('Account and registration'),t('Name, description, theme and color'),()=>modalTarget('settings-button')),row('🔔',t('Notification sounds'),t('Toggle message and call sounds'),()=>modalTarget('notification-button')),row('🤖',t('My bots'),t('Bot management'),()=>modalTarget('bots-button')));contentBody.append(settings);
       const extras = card();
-      if (edition === 'full') extras.append(row('✦','LChat Premium',t('Платёжная система пока не подключена'),()=>navigate('premium.php')));
-      if (edition !== 'web') extras.append(row('🎁',t('Подарки и тикеты'),t('Коллекция и отправка подарков'),()=>navigate('rewards.php')));
-      if (edition === 'full') extras.append(row('📱',t('Приложение'),t('Версии для Android'),()=>navigate('application.php')));
+      if (edition === 'full') extras.append(row('✦','LChat Premium',t('Payment system is not connected yet'),()=>navigate('premium.php')));
+      if (edition !== 'web') extras.append(row('🎁',t('Gifts and tickets'),t('Collection and sending of gifts'),()=>navigate('rewards.php')));
+      if (edition === 'full') extras.append(row('📱',t('Appendix'),t('Versions for Android'),()=>navigate('application.php')));
       if (extras.childElementCount) contentBody.append(extras);
       const help = card();
-      if (edition === 'full') help.append(row('💬',t('Поддержка'),t('Написать в поддержку'),()=>navigate('support.php')),row('🔒',t('Политика конфиденциальности'),'',()=>navigate('privacy.php')),row('📄',t('Пользовательское соглашение'),'',()=>navigate('terms.php')));
-      help.append(row('⌘',t('Документация Bot API'),'',()=>navigate('docs.php')));
+      if (edition === 'full') help.append(row('💬',t('Support'),t('Write to support'),()=>navigate('support.php')),row('🔒',t('Privacy Policy'),'',()=>navigate('privacy.php')),row('📄',t('User Agreement'),'',()=>navigate('terms.php')));
+      help.append(row('⌘',t('Documentation Bot API'),'',()=>navigate('docs.php')));
       contentBody.append(help);
       return;
     }
-    const actions=el('div','mobile-profile-actions');for(const [symbol,label,target] of [['📷',t('Выбрать фото'),'profile-button'],['✎',t('Изменить'),'settings-button'],['⚙',t('Настройки'),'settings-button']]){const b=el('button','mobile-profile-action');b.type='button';b.append(rowIcon(symbol),el('small','',label));b.addEventListener('click',()=>modalTarget(target));actions.append(b);}contentBody.append(actions);
-    const info=card();info.append(el('div','mobile-profile-value','@'+user.username),el('small','mobile-profile-label',t('Имя пользователя')));contentBody.append(info);
+    const actions=el('div','mobile-profile-actions');for(const [symbol,label,target] of [['📷',t('Select photo'),'profile-button'],['✎',t('Edit'),'settings-button'],['⚙',t('Settings'),'settings-button']]){const b=el('button','mobile-profile-action');b.type='button';b.append(rowIcon(symbol),el('small','',label));b.addEventListener('click',()=>modalTarget(target));actions.append(b);}contentBody.append(actions);
+    const info=card();info.append(el('div','mobile-profile-value','@'+user.username),el('small','mobile-profile-label',t('Username')));contentBody.append(info);
     if (edition === 'web') return;
-    const gifts=card();gifts.append(el('h3','mobile-card-title',t('Подарки 🎁')),el('p','mobile-screen-note',t('Загружаем подарки…')));contentBody.append(gifts);
-    const open=el('button','mobile-gifts-open',t('Открыть подарки и тикеты'));open.type='button';open.onclick=()=>navigate('rewards.php');contentBody.append(open);
-    try{const url=new URL('user-profile.php',location.href);url.searchParams.set('id',user.id);const response=await fetch(url,{credentials:'same-origin',cache:'no-store'});const data=await response.json();if(!response.ok)throw new Error(data.error||t('Не удалось загрузить профиль.'));if(serial!==generation)return;const p=data.profile;if(p.bio){info.prepend(el('small','mobile-profile-label',t('О себе')));info.prepend(el('div','mobile-profile-value',p.bio));}if(Number(p.verified))hero.querySelector('h2').append(el('span','mobile-profile-verified',' ✓'));gifts.replaceChildren(el('h3','mobile-card-title',t('Подарки 🎁')));if(!data.gifts?.length)gifts.append(el('p','mobile-screen-note',t('У вас пока нет подарков.')));else{const grid=el('div','mobile-gift-grid');for(const gift of data.gifts){const item=el('div','mobile-gift-item'),art=el('span','',gift.emoji);if(/^gift_[0-9]{19}$/.test(gift.tgs||'')){art.textContent='';art.classList.add('gift-tgs');art.dataset.tgs=gift.tgs;const image=el('img','tgs-preview');image.src='https://data.lbs.su/lchat-gifts/webp/'+gift.tgs+'.webp';image.alt=gift.name;image.loading='lazy';art.append(image);}else if(Number.isInteger(gift.sprite)&&gift.sprite>=0&&gift.sprite<9){art.textContent='';art.classList.add('profile-sprite');art.dataset.sprite=gift.sprite;art.dataset.variant=gift.variant;}item.append(art,el('strong','',gift.name),el('small','',gift.fingerprint?'#'+gift.fingerprint.slice(0,12):'× '+gift.count));if(gift.fingerprint)window.LChatGiftArt?.decorate(item,gift.fingerprint);grid.append(item);}gifts.append(grid);if(data.has_more)gifts.append(el('p','mobile-screen-note',t('Показаны последние 100 подарков. Остальные — в коллекции.')));}}catch(e){if(serial===generation)gifts.lastElementChild.textContent=e.message||t('Не удалось загрузить подарки.');}
+    const gifts=card();gifts.append(el('h3','mobile-card-title',t('Gifts 🎁')),el('p','mobile-screen-note',t('Loading gifts…')));contentBody.append(gifts);
+    const open=el('button','mobile-gifts-open',t('Open gifts and tickets'));open.type='button';open.onclick=()=>navigate('rewards.php');contentBody.append(open);
+    try{const url=new URL('user-profile.php',location.href);url.searchParams.set('id',user.id);const response=await fetch(url,{credentials:'same-origin',cache:'no-store'});const data=await response.json();if(!response.ok)throw new Error(data.error||t('Failed to load profile.'));if(serial!==generation)return;const p=data.profile;if(p.bio){info.prepend(el('small','mobile-profile-label',t('About')));info.prepend(el('div','mobile-profile-value',p.bio));}if(Number(p.verified))hero.querySelector('h2').append(el('span','mobile-profile-verified',' ✓'));gifts.replaceChildren(el('h3','mobile-card-title',t('Gifts 🎁')));if(!data.gifts?.length)gifts.append(el('p','mobile-screen-note',t('You don’t have any gifts yet.')));else{const grid=el('div','mobile-gift-grid');for(const gift of data.gifts){const item=el('div','mobile-gift-item'),art=el('span','',gift.emoji);if(/^gift_[0-9]{19}$/.test(gift.tgs||'')){art.textContent='';art.classList.add('gift-tgs');art.dataset.tgs=gift.tgs;const image=el('img','tgs-preview');image.src='/assets/lchat-gifts/webp/'+gift.tgs+'.webp';image.alt=gift.name;image.loading='lazy';art.append(image);}else if(Number.isInteger(gift.sprite)&&gift.sprite>=0&&gift.sprite<9){art.textContent='';art.classList.add('profile-sprite');art.dataset.sprite=gift.sprite;art.dataset.variant=gift.variant;}item.append(art,el('strong','',gift.name),el('small','',gift.fingerprint?'#'+gift.fingerprint.slice(0,12):'× '+gift.count));if(gift.fingerprint)window.LChatGiftArt?.decorate(item,gift.fingerprint);grid.append(item);}gifts.append(grid);if(data.has_more)gifts.append(el('p','mobile-screen-note',t('Shows the last 100 gifts. The rest are in the collection.')));}}catch(e){if(serial===generation)gifts.lastElementChild.textContent=e.message||t('Failed to load gifts.');}
   }
   buttons.chats.addEventListener('click',()=>{showChats();const modal=document.getElementById('modal');if(modal?.open)modal.close();const panel=document.querySelector('.community-panel[open]');if(panel?.close)panel.close();});
   for(const id of ['contacts','settings','profile'])buttons[id].addEventListener('click',()=>showScreen(id));

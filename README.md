@@ -1,6 +1,11 @@
 # LChat
 
-**Windows и доступ к портам / Windows and port access:** [Инструкция для Windows](WINDOWS_HOST_RU.md) · [Windows guide](WINDOWS_HOST_EN.md) · [Программы и настройка](PORT_TOOLS_RU.md) · [Tools and setup](PORT_TOOLS_EN.md)
+<!-- live-sync-20261119 -->
+
+[Website update and deployment (English)](SYNC_EN.md) · [Обновление и размещение (русский)](SYNC_RU.md)
+
+
+**Windows and port access:** [Windows guide](WINDOWS_HOST_EN.md) · [Port forwarding and tunnels](PORT_TOOLS_EN.md) · [Russian Windows guide](WINDOWS_HOST_RU.md)
 
 
 > **Notice:** LChat was created entirely with the help of artificial intelligence. The project includes third-party components identified in its documentation and licenses.

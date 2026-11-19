@@ -1,8 +1,6 @@
 <?php
 declare(strict_types=1);
 define('LCHAT_INTERNAL', true);
-require_once __DIR__ . '/apis/frontend_mode.php';
-if (frontend_is_remote()) { require __DIR__ . '/channel-pc.php'; exit; }
 require __DIR__.'/app.php';
 header('Cache-Control: no-store');
 try {
@@ -12,4 +10,4 @@ try {
     if (str_ends_with($path,'/')) {header('Location: '.rtrim($path,'/'),true,308);exit;}
     ob_start();require __DIR__.'/index.php';$html=ob_get_clean();
     echo str_replace('<head>','<head><script>window.LCHAT_CHANNEL='.json_encode($slug,JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT).';</script>',$html);
-} catch(Throwable $e){error_log('LChat channel: '.$e->getMessage());http_response_code(503);echo 'Could not open the channel. Check the PHP log.';}
+} catch(Throwable $e){error_log('LChat channel: '.$e->getMessage());http_response_code(503);echo 'Failed to open channel. Check the log PHP.';}

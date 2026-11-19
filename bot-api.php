@@ -2,6 +2,7 @@
 declare(strict_types=1);
 define('LCHAT_INTERNAL', true);
 require __DIR__ . '/app.php';
+require_once __DIR__ . '/apis/bots/pages/lib.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 header('Referrer-Policy: no-referrer');
@@ -23,19 +24,19 @@ function bot_number(mixed $value, string $name, int $minimum = 1): int {
     return (int)$number;
 }
 function bot_text(mixed $value): string {
-    if (!is_string($value)) bot_error(400, 'Enter message text.');
+    if (!is_string($value)) bot_error(400, 'Specify the text of the message.');
     $value = trim($value);
-    if ($value === '' || !mb_check_encoding($value, 'UTF-8') || strlen($value) > MESSAGE_TEXT_MAX_BYTES || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $value)) bot_error(400, 'Text must be valid UTF-8 and at most 10 MiB.');
+    if ($value === '' || !mb_check_encoding($value, 'UTF-8') || strlen($value) > MESSAGE_TEXT_MAX_BYTES || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $value)) bot_error(400, 'The text must be in UTF-8 and not to exceed 10 MiB.');
     return $value;
 }
 function bot_boolean(mixed $value): bool {
     if (is_bool($value)) return $value;
-    if (!is_scalar($value)) throw new DomainException('Expected a boolean value.');
+    if (!is_scalar($value)) throw new DomainException('Boolean value expected.');
     return in_array(strtolower((string)$value), ['1', 'true', 'yes', 'on'], true);
 }
 function bot_chat(int $chatId, int $botId): array {
     $chat = one('SELECT c.id, c.kind, c.title, m.role, m.joined_at FROM chats c JOIN members m ON m.chat_id = c.id WHERE c.id = ? AND m.user_id = ?', [$chatId, $botId]);
-    if (!$chat) bot_error(403, 'The bot is not a member of this chat.');
+    if (!$chat) bot_error(403, 'Bot is not in this chat.');
     return $chat;
 }
 function bot_chat_info(array $chat): array {
@@ -65,25 +66,30 @@ function bot_limit(int $botId, int $maximum, int $seconds): void {
     $row = one('SELECT hits FROM rate_limits WHERE bucket = ?', [$key]);
     if ((int)$row['hits'] > $maximum) { header('Retry-After: ' . $seconds); bot_error(429, 'Too many requests.'); }
 }
+function bot_site_user(int $botId, int $userId): array {
+    $user=one('SELECT id,username FROM users WHERE id=? AND id<>?',[$userId,$botId]);
+    if(!$user||!one('SELECT m1.chat_id FROM members m1 JOIN members m2 ON m2.chat_id=m1.chat_id WHERE m1.user_id=? AND m2.user_id=? LIMIT 1',[$botId,$userId]))bot_error(403,'User has not interacted with this bot.');
+    return $user;
+}
 
 try {
     ensure_features();
     $token = bot_request_token();
-    if ($token === '') bot_error(401, 'No bot token was received. Send Authorization: Bearer or X-LChat-Bot-Token.');
+    if ($token === '') bot_error(401, 'The token was not received by the server. Pass it on Authorization: Bearer or X-LChat-Bot-Token.');
     if (!preg_match('/^([0-9]+):([a-f0-9]{48})$/D', $token, $parts)) bot_error(401, 'Invalid bot token.');
     $botId = (int)$parts[1];
     $bot = one('SELECT b.bot_user_id, b.owner_user_id, u.username, u.name FROM bot_accounts b JOIN users u ON u.id = b.bot_user_id WHERE b.bot_user_id = ? AND b.token_hash = ?', [$botId, hash('sha256', $token)]);
     if (!$bot || service_ban($botId) || service_ban((int)$bot['owner_user_id'])) bot_error(401, 'Invalid bot token.');
     bot_limit($botId, 180, 60);
     $method = (string)($_GET['method'] ?? '');
-    $readMethods = ['getMe', 'getUpdates', 'getChat', 'getChats', 'getChatMemberCount', 'getChatMember', 'getMessage', 'getWebhookInfo', 'getFile'];
+    $readMethods = ['getMe', 'getUpdates', 'getChat', 'getChats', 'getChatMemberCount', 'getChatMember', 'getMessage', 'getWebhookInfo', 'getFile', 'getTemporarySites', 'getSitePermission'];
     if (in_array($method, $readMethods, true)) {
         if ($_SERVER['REQUEST_METHOD'] !== 'GET') bot_error(405, 'Use GET.');
         $data = $_GET;
     } else {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') bot_error(405, 'Use POST.');
         $multipart = str_contains(strtolower((string)($_SERVER['CONTENT_TYPE'] ?? '')), 'multipart/form-data');
-        $maxBytes = $multipart ? 10 * 1024 * 1024 : (in_array($method, ['sendMessage', 'editMessageText'], true) ? MESSAGE_REQUEST_MAX_BYTES : 65536);
+        $maxBytes = $multipart ? 10 * 1024 * 1024 : (in_array($method,['createTemporarySite','publishPermanentSite'],true) ? 1200000 : (in_array($method, ['sendMessage', 'editMessageText'], true) ? MESSAGE_REQUEST_MAX_BYTES : 65536));
         if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > $maxBytes) bot_error(413, 'Request too large.');
         if ($multipart) $data = $_POST;
         else {
@@ -100,10 +106,10 @@ try {
             query('DELETE FROM bot_webhooks WHERE bot_user_id = ?', [$botId]);
             bot_result(true);
         }
-        if (!extension_loaded('curl')) bot_error(503, 'Webhooks require the curl extension.');
+        if (!extension_loaded('curl')) bot_error(503, 'Webhooks require an extension curl.');
         bot_platform_webhook_target($url);
         $secret = (string)($data['secret_token'] ?? '');
-        if ($secret !== '' && !preg_match('/^[A-Za-z0-9_-]{1,256}$/D', $secret)) bot_error(400, 'secret_token may contain only Latin letters, digits, underscores, or hyphens.');
+        if ($secret !== '' && !preg_match('/^[A-Za-z0-9_-]{1,256}$/D', $secret)) bot_error(400, 'secret_token must contain Latin letters, numbers, _ or -.');
         transaction(static function () use ($botId, $url, $secret): void {
             query('UPDATE users SET name = name WHERE id = ?', [$botId]);
             if (one('SELECT bot_user_id FROM bot_webhooks WHERE bot_user_id = ?', [$botId])) query('UPDATE bot_webhooks SET url = ?, secret_token = ?, last_error_message = ? WHERE bot_user_id = ?', [$url, $secret, '', $botId]);
@@ -126,7 +132,7 @@ try {
         bot_result($info);
     }
     if ($method === 'getUpdates') {
-        if (one('SELECT bot_user_id FROM bot_webhooks WHERE bot_user_id = ?', [$botId])) bot_error(409, 'Disable the webhook with deleteWebhook first.');
+        if (one('SELECT bot_user_id FROM bot_webhooks WHERE bot_user_id = ?', [$botId])) bot_error(409, 'First disable the webhook via deleteWebhook.');
         $offset = bot_number($data['offset'] ?? 0, 'offset', 0);
         $limit = min(100, bot_number($data['limit'] ?? 50, 'limit'));
         if ($offset > 0) query('DELETE FROM bot_updates WHERE bot_user_id = ? AND id < ?', [$botId, $offset]);
@@ -145,10 +151,44 @@ try {
     if ($method === 'answerCallbackQuery') {
         $id = (string)($data['callback_query_id'] ?? '');
         $answer = trim((string)($data['text'] ?? ''));
-        if (!preg_match('/^[a-f0-9]{32}$/D', $id) || mb_strlen($answer, 'UTF-8') > 200) bot_error(400, 'Invalid callback answer.');
+        if (!preg_match('/^[a-f0-9]{32}$/D', $id) || mb_strlen($answer, 'UTF-8') > 200) bot_error(400, 'Incorrect response to button press.');
         $changed = query('UPDATE bot_callback_queries SET answer_text = ?, answered_at = ? WHERE id = ? AND bot_user_id = ? AND answered_at IS NULL', [$answer, stamp(), $id, $botId]);
-        if ($changed->rowCount() !== 1) bot_error(404, 'Callback not found or already handled.');
+        if ($changed->rowCount() !== 1) bot_error(404, 'Click not found or already processed.');
         bot_result(true);
+    }
+    if ($method === 'getTemporarySites') {
+        $ownerRef = bot_number($data['owner_user_id'] ?? null, 'owner_user_id');
+        bot_result(temp_site_list($botId, $ownerRef, (string)(config()['public_url'] ?? 'https://chat.lbs.su/')));
+    }
+    if ($method === 'createTemporarySite') {
+        $ownerRef = bot_number($data['owner_user_id'] ?? null, 'owner_user_id');
+        $name = is_string($data['name'] ?? null) ? $data['name'] : '';
+        $files = $data['files'] ?? null;
+        if (!is_array($files)) bot_error(400, 'Pass the object files: path → contents.');
+        try { bot_result(temp_site_create($botId, $ownerRef, $name, $files, (string)(config()['public_url'] ?? 'https://chat.lbs.su/'))); }
+        catch (DomainException $e) { bot_error(400, $e->getMessage()); }
+    }
+    if ($method === 'deleteTemporarySite') {
+        $ownerRef = bot_number($data['owner_user_id'] ?? null, 'owner_user_id');
+        $siteId = strtolower(trim((string)($data['site_id'] ?? '')));
+        $meta = temp_site_get($siteId);
+        if (!$meta || (int)($meta['bot_id'] ?? 0) !== $botId || (int)($meta['owner_ref'] ?? 0) !== $ownerRef) bot_error(404, 'Temporary site not found.');
+        temp_site_remove($siteId);
+        bot_result(true);
+    }
+    if ($method === 'getSitePermission') {
+        $ownerRef=bot_number($data['owner_user_id']??null,'owner_user_id');bot_site_user($botId,$ownerRef);
+        bot_result(['status'=>user_site_permission($ownerRef,$botId),'site'=>user_site_info($ownerRef)]);
+    }
+    if ($method === 'requestSitePermission') {
+        $ownerRef=bot_number($data['owner_user_id']??null,'owner_user_id');bot_site_user($botId,$ownerRef);
+        bot_result(service_site_permission_request($ownerRef,$botId));
+    }
+    if ($method === 'publishPermanentSite') {
+        $ownerRef=bot_number($data['owner_user_id']??null,'owner_user_id');bot_site_user($botId,$ownerRef);
+        if(user_site_permission($ownerRef,$botId)!=='approved')bot_error(403,'The user has not yet allowed this bot to create a permanent site.');
+        if(!is_array($data['files']??null))bot_error(400,'Pass the object files: path → contents.');
+        try{bot_result(user_site_publish($ownerRef,(string)($data['name']??''),$data['files']));}catch(DomainException $e){bot_error(400,$e->getMessage());}
     }
 
     if ($method === 'getChats') {
@@ -168,7 +208,7 @@ try {
     if ($method === 'getChatMember') {
         $userId = bot_number($data['user_id'] ?? null, 'user_id');
         $member = one('SELECT u.id, u.name, u.username, m.role, CASE WHEN b.bot_user_id IS NULL AND s.user_id IS NULL THEN 0 ELSE 1 END AS is_bot FROM members m JOIN users u ON u.id = m.user_id LEFT JOIN bot_accounts b ON b.bot_user_id = u.id LEFT JOIN system_bots s ON s.user_id = u.id WHERE m.chat_id = ? AND m.user_id = ?', [$chatId, $userId]);
-        if (!$member) bot_error(404, 'Chat member not found.');
+        if (!$member) bot_error(404, 'Participant not found.');
         $status = match ($member['role']) {
             'owner' => 'creator',
             'admin' => 'administrator',
@@ -182,16 +222,16 @@ try {
     if (in_array($method, ['getMessage', 'setMessageReaction', 'editMessageCaption'], true)) {
         $messageId = bot_number($data['message_id'] ?? null, 'message_id');
         $message = one('SELECT id, user_id FROM messages WHERE id = ? AND chat_id = ? AND created_at >= ?', [$messageId, $chatId, $chat['joined_at']]);
-        if (!$message) bot_error(404, 'This message is unavailable to the bot.');
+        if (!$message) bot_error(404, 'Message not available to bot.');
         if ($method === 'getMessage') bot_result(bot_message_by_id($messageId));
         if ($method === 'setMessageReaction') {
-            if (!array_key_exists('emoji', $data)) bot_error(400, 'Specify emoji. Use null to clear the reaction.');
+            if (!array_key_exists('emoji', $data)) bot_error(400, 'Please indicate emoji. To delete, send null.');
             $emoji = $data['emoji'];
             if ($emoji === null || $emoji === '') {
                 query('DELETE FROM message_reactions WHERE message_id = ? AND user_id = ?', [$messageId, $botId]);
                 bot_result(true);
             }
-            if (!in_array($emoji, ['👍', '❤️', '😂', '😮', '😢', '👏'], true)) bot_error(400, 'Choose a supported reaction.');
+            if (!in_array($emoji, ['👍', '❤️', '😂', '😮', '😢', '👏'], true)) bot_error(400, 'Select a reaction from the list.');
             $upsert = db()->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql'
                 ? ' ON DUPLICATE KEY UPDATE emoji = VALUES(emoji), created_at = VALUES(created_at)'
                 : ' ON CONFLICT (message_id, user_id) DO UPDATE SET emoji = excluded.emoji, created_at = excluded.created_at';
@@ -203,7 +243,7 @@ try {
         }
         $caption = $data['caption'] ?? '';
         if (!is_string($caption) || !mb_check_encoding($caption, 'UTF-8') || mb_strlen($caption, 'UTF-8') > 1024 || preg_match('/[ --]/', $caption)) {
-            bot_error(400, 'The caption must be valid UTF-8 and at most 1024 characters.');
+            bot_error(400, 'The signature must be in UTF-8 and no longer than 1024 characters.');
         }
         transaction(static function () use ($chatId, $messageId, $botId, $caption): void {
             $at = stamp();
@@ -213,11 +253,11 @@ try {
         bot_result(bot_message_by_id($messageId));
     }
     if ($method === 'sendMessage') {
-        if ($chat['kind'] === 'channel' && $chat['role'] !== 'admin') bot_error(403, 'The bot cannot post to this channel.');
+        if ($chat['kind'] === 'channel' && $chat['role'] !== 'admin') bot_error(403, 'Bot cannot be published in this channel.');
         bot_limit($botId, 90, 60);
         $text = bot_text($data['text'] ?? null);
         $reply = isset($data['reply_to_message_id']) ? bot_number($data['reply_to_message_id'], 'reply_to_message_id') : null;
-        if ($reply && !one('SELECT id FROM messages WHERE id = ? AND chat_id = ?', [$reply, $chatId])) bot_error(400, 'Reply target not found in this chat.');
+        if ($reply && !one('SELECT id FROM messages WHERE id = ? AND chat_id = ?', [$reply, $chatId])) bot_error(400, 'Reply message not found in this chat.');
         $markup = bot_platform_markup($data['reply_markup'] ?? null);
         $messageId = transaction(static function () use ($chatId, $botId, $text, $reply, $markup): int {
             query('INSERT INTO messages (chat_id, user_id, body, nonce, reply_to_id, created_at) VALUES (?, ?, ?, ?, ?, ?)', [$chatId, $botId, message_store($text), 'bot_' . bin2hex(random_bytes(20)), $reply, stamp()]);
@@ -229,7 +269,7 @@ try {
         bot_result(bot_message_by_id($messageId));
     }
     if (in_array($method, ['sendDocument', 'sendPhoto', 'sendAudio', 'sendVideo', 'sendVoice', 'sendAnimation'], true)) {
-        if ($chat['kind'] === 'channel' && $chat['role'] !== 'admin') bot_error(403, 'The bot cannot post to this channel.');
+        if ($chat['kind'] === 'channel' && $chat['role'] !== 'admin') bot_error(403, 'Bot cannot be published in this channel.');
         bot_limit($botId, 30, 3600);
         $kind = match ($method) { 'sendPhoto' => 'photo', 'sendAudio' => 'audio', 'sendVideo' => 'video', 'sendVoice' => 'voice', 'sendAnimation' => 'animation', default => 'document' };
         bot_result(bot_file_send($botId, $chatId, $kind, $data, bot_platform_markup($data['reply_markup'] ?? null)));
@@ -239,10 +279,10 @@ try {
         $text = bot_text($data['text'] ?? null);
         $message = one('SELECT m.id, m.body, f.message_id AS file_id, i.message_id AS invite_id, e.message_id AS event_id FROM messages m LEFT JOIN message_files f ON f.message_id = m.id LEFT JOIN message_invites i ON i.message_id = m.id LEFT JOIN message_events e ON e.message_id = m.id WHERE m.id = ? AND m.chat_id = ? AND m.user_id = ?', [$messageId, $chatId, $botId]);
         if (!$message) bot_error(404, 'Bot message not found.');
-        if ($message['file_id'] || $message['invite_id'] || $message['event_id']) bot_error(400, 'This type of message cannot be edited.');
+        if ($message['file_id'] || $message['invite_id'] || $message['event_id']) bot_error(400, 'This message type cannot be edited.');
         $markupProvided = array_key_exists('reply_markup', $data);
         $markup = $markupProvided ? bot_platform_markup($data['reply_markup']) : null;
-        if ($markup !== null && !isset(json_decode($markup, true)['inline_keyboard'])) bot_error(400, 'Only inline buttons are allowed when editing.');
+        if ($markup !== null && !isset(json_decode($markup, true)['inline_keyboard'])) bot_error(400, 'When editing, only inline-buttons.');
         if (message_read($message['body']) !== $text || $markupProvided) transaction(function () use ($chatId, $messageId, $text, $markup, $markupProvided): void {
             $at = stamp();
             query('UPDATE messages SET body = ?, edited_at = ? WHERE id = ? AND chat_id = ?', [message_store($text), $at, $messageId, $chatId]);
@@ -255,7 +295,7 @@ try {
         $messageId = bot_number($data['message_id'] ?? null, 'message_id');
         if (!one('SELECT id FROM messages WHERE id = ? AND chat_id = ? AND user_id = ?', [$messageId, $chatId, $botId])) bot_error(404, 'Bot message not found.');
         $markup = bot_platform_markup($data['reply_markup'] ?? null);
-        if ($markup !== null && !isset(json_decode($markup, true)['inline_keyboard'])) bot_error(400, 'Only inline buttons are allowed when editing.');
+        if ($markup !== null && !isset(json_decode($markup, true)['inline_keyboard'])) bot_error(400, 'When editing, only inline-buttons.');
         transaction(static function () use ($chatId, $messageId, $markup): void {
             bot_platform_save_markup($messageId, $markup);
             $at = stamp();
@@ -267,15 +307,15 @@ try {
     if ($method === 'deleteMessage') {
         $messageId = bot_number($data['message_id'] ?? null, 'message_id');
         $file = one('SELECT f.stored_name FROM message_files f JOIN messages m ON m.id = f.message_id WHERE m.id = ? AND m.chat_id = ? AND m.user_id = ?', [$messageId, $chatId, $botId]);
-        $deleted = query('DELETE FROM messages WHERE id = ? AND chat_id = ? AND user_id = ?', [$messageId, $chatId, $botId]);
-        if ($deleted->rowCount() !== 1) bot_error(404, 'Bot message not found.');
-        if ($file && preg_match('/^[a-f0-9]{48}\.bin$/D', $file['stored_name'])) { $path = __DIR__ . '/files/' . $file['stored_name']; if (is_file($path)) unlink($path); }
+        $deleted = delete_message_row($messageId, $chatId, $botId);
+        if ($deleted !== 1) bot_error(404, 'Bot message not found.');
+        if ($file && preg_match('/^[a-f0-9]{48}\.bin$/D', $file['stored_name'])) { $path = lchat_file_path($file['stored_name']); if (is_file($path)) unlink($path); }
         bot_result(true);
     }
-    bot_error(404, 'Bot API method not found.');
+    bot_error(404, 'Method Bot API not found.');
 } catch (DomainException $e) {
     bot_error(400, $e->getMessage());
 } catch (Throwable $e) {
     error_log('LChat Bot API: ' . get_class($e) . ' ' . $e->getMessage());
-    bot_error(500, 'Bot API error. Check the PHP log.');
+    bot_error(500, 'Error Bot API. Check the log PHP.');
 }

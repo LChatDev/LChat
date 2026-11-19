@@ -18,20 +18,20 @@ function bot_file_source(int $botId, string $field, array $data, string $kind): 
         if (($upload['error'] ?? null) !== UPLOAD_ERR_OK || !is_string($upload['tmp_name'] ?? null) || !is_uploaded_file($upload['tmp_name'])) throw new DomainException('Could not upload the file. Maximum size: 8 MB.');
         $source = $upload['tmp_name'];
         $size = filesize($source);
-        if ($size === false || $size < 1 || $size > 8 * 1024 * 1024) throw new DomainException('File must be between 1 byte and 8 MB.');
-        if (!extension_loaded('fileinfo')) throw new RuntimeException('Files require the fileinfo extension.');
+        if ($size === false || $size < 1 || $size > 200 * 1024 * 1024) throw new DomainException('File must be between 1 byte and 8 MB.');
+        if (!extension_loaded('fileinfo')) throw new RuntimeException('File extension required fileinfo.');
         $mime = (new finfo(FILEINFO_MIME_TYPE))->file($source);
         if (!is_string($mime) || !bot_file_allowed($mime, $kind)) throw new DomainException('This file format is not supported.');
         $name = str_replace(['/', '\\'], '_', preg_replace('/[\x00-\x1f\x7f]/u', '_', (string)($upload['name'] ?? '')) ?? '');
         return [$source, mb_substr($name ?: 'File', 0, 190), $mime, (int)$size, true];
     }
     $fileId = $data[$field] ?? null;
-    if ((!is_string($fileId) && !is_int($fileId)) || !preg_match('/^[0-9]+$/D', (string)$fileId)) throw new DomainException('Upload a file with multipart/form-data or provide file_id.');
+    if ((!is_string($fileId) && !is_int($fileId)) || !preg_match('/^[0-9]+$/D', (string)$fileId)) throw new DomainException('Transfer the file via multipart/form-data or specify file_id.');
     $file = one('SELECT f.stored_name, f.original_name, f.mime, f.size, m.chat_id, m.created_at, mem.joined_at FROM message_files f JOIN messages m ON m.id = f.message_id JOIN members mem ON mem.chat_id = m.chat_id AND mem.user_id = ? WHERE f.message_id = ?', [$botId, (int)$fileId]);
     if (!$file || $file['created_at'] < $file['joined_at']) throw new DomainException('This bot cannot access the file.');
     if (!bot_file_allowed($file['mime'], $kind)) throw new DomainException('This file type is not valid for this method.');
     if (!preg_match('/^[a-f0-9]{48}\.bin$/D', $file['stored_name'])) throw new DomainException('File unavailable.');
-    $source = dirname(__DIR__) . '/files/' . $file['stored_name'];
+    $source = lchat_file_path($file['stored_name']);
     if (!is_file($source)) throw new DomainException('File is no longer available.');
     return [$source, $file['original_name'], $file['mime'], (int)$file['size'], false];
 }
@@ -46,8 +46,8 @@ function bot_file_send(int $botId, int $chatId, string $kind, array $data, ?stri
     $reply = isset($data['reply_to_message_id']) ? (int)$data['reply_to_message_id'] : null;
     if ($reply && !one('SELECT id FROM messages WHERE id = ? AND chat_id = ?', [$reply, $chatId])) throw new DomainException('Reply target not found.');
     $duration = $kind === 'voice' ? max(1, min(180, (int)($data['duration'] ?? 1))) : 0;
-    $dir = dirname(__DIR__) . '/files';
-    if (!is_dir($dir) || !is_writable($dir)) throw new RuntimeException('The files directory is not writable.');
+    $dir = rtrim(lchat_file_path('', true), '/');
+    if (!is_dir($dir) || !is_writable($dir)) throw new RuntimeException('Folder files not available for recording.');
     $storedName = bin2hex(random_bytes(24)) . '.bin';
     $path = $dir . '/' . $storedName;
     if ($uploaded ? !move_uploaded_file($source, $path) : !copy($source, $path)) throw new RuntimeException('Could not save the bot file.');

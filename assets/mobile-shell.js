@@ -9,7 +9,7 @@
   const mobile = matchMedia('(max-width: 760px)');
   const viewport = window.visualViewport;
   const inputSelector = 'textarea,input:not([type]),input[type="text"],input[type="search"],[contenteditable="true"]';
-  back.setAttribute('aria-label', document.documentElement.lang === 'en' ? 'Back to chats' : 'Назад к чатам');
+  back.setAttribute('aria-label', document.documentElement.lang === 'en' ? 'Back to chats' : 'Back to chats');
 
   function syncViewport() {
     const editing = mobile.matches && (document.activeElement?.matches(inputSelector) || false);

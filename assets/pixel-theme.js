@@ -12,14 +12,14 @@
     box.className = 'pixel-appearance';
     const skinLabel = document.createElement('div');
     skinLabel.className = 'pixel-appearance-label';
-    skinLabel.textContent = english ? 'Look' : 'Оформление';
+    skinLabel.textContent = english ? 'Look' : 'Appearance';
     const skinRow = document.createElement('div');
     skinRow.className = 'pixel-appearance-row';
     skinRow.setAttribute('role', 'group');
     skinRow.setAttribute('aria-label', skinLabel.textContent);
     const modeLabel = document.createElement('div');
     modeLabel.className = 'pixel-appearance-label';
-    modeLabel.textContent = english ? 'Theme' : 'Тема';
+    modeLabel.textContent = english ? 'Theme' : 'Topic';
     const modeRow = document.createElement('div');
     modeRow.className = 'pixel-appearance-row';
     modeRow.setAttribute('role', 'group');
@@ -51,7 +51,7 @@
       } catch (_) {}
       paint();
     }
-    for (const [skin, label] of [['pixel', english ? 'Pixel' : 'Пиксель'], ['telegram', 'Telegram']]) {
+    for (const [skin, label] of [['pixel', english ? 'Pixel' : 'Pixel'], ['telegram', 'Telegram']]) {
       const button = document.createElement('button');
       button.type = 'button';
       button.dataset.skin = skin;
@@ -59,7 +59,7 @@
       button.addEventListener('click', () => setSkin(skin));
       skinRow.append(button);
     }
-    for (const [mode, label] of [['dark', english ? 'Dark' : 'Тёмная'], ['light', english ? 'Light' : 'Светлая']]) {
+    for (const [mode, label] of [['dark', english ? 'Dark' : 'Dark'], ['light', english ? 'Light' : 'Light']]) {
       const button = document.createElement('button');
       button.type = 'button';
       button.dataset.mode = mode;
@@ -89,7 +89,7 @@
   function setSearch(open, moveFocus = true) {
     header.classList.toggle('pixel-search-open', open);
     toggle.setAttribute('aria-expanded', String(open));
-    toggle.setAttribute('aria-label', open ? (english ? 'Close search' : 'Закрыть поиск') : (english ? 'Search chats' : 'Поиск чатов'));
+    toggle.setAttribute('aria-label', open ? (english ? 'Close search' : 'Close search') : (english ? 'Search chats' : 'Chat search'));
     toggle.innerHTML = open
       ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2"/></svg>'
       : '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2"/><path d="m15 15 5 5" stroke="currentColor" stroke-width="2"/></svg>';

@@ -19,18 +19,18 @@ try {
     rate('upload:' . $user['id'], 30, 3600);
     $file = $_FILES['file'] ?? null;
     if (!$file || !is_int($file['error'] ?? null) || $file['error'] !== UPLOAD_ERR_OK || !is_string($file['tmp_name'] ?? null) || !is_uploaded_file($file['tmp_name'])) fail(422, 'Could not upload the file. Maximum size: 8 MB.');
-    $size = filesize($file['tmp_name']); if ($size === false || $size < 1 || $size > 8 * 1024 * 1024) fail(422, 'File must be between 1 byte and 8 MB.');
-    if (!extension_loaded('fileinfo')) fail(503, 'Enable the fileinfo extension on the server.');
+    $size = filesize($file['tmp_name']); if ($size === false || $size < 1 || $size > 200 * 1024 * 1024) fail(422, 'File must be between 1 byte and 8 MB.');
+    if (!extension_loaded('fileinfo')) fail(503, 'You need to enable the extension on the server fileinfo.');
     $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
     if ($voice && !in_array($mime, ['audio/ogg','application/ogg','audio/webm','video/webm','audio/mp4','audio/x-m4a','video/mp4','audio/mpeg','audio/wav','audio/x-wav'], true)) fail(422, 'A voice message file must contain audio.');
     $allowed = ['image/jpeg','image/png','image/gif','image/webp','application/pdf','text/plain','application/zip','application/x-zip-compressed','application/gzip','application/x-7z-compressed','application/vnd.rar','application/x-rar','audio/mpeg','audio/ogg','audio/wav','audio/x-wav','audio/mp4','audio/x-m4a','video/mp4','video/webm','application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.presentationml.presentation'];
-    if (!$voice && !in_array($mime, $allowed, true)) fail(422, 'This file format is not supported. You can send a photo, PDF, text, archive, audio, video, or Office document.');
+    if (!$voice && !in_array($mime, $allowed, true)) fail(422, 'This file format is not supported. You can send a photo, PDF, text, archive, audio, video or document Office.');
     $name = str_replace(['/', '\\'], '_', preg_replace('/[\x00-\x1f\x7f]/u', '_', (string)$file['name']) ?? '');
     $name = mb_substr($name ?: 'File', 0, 190);
     $body = field(['body' => $_POST['body'] ?? ''], 'body', 0, 4000);
     if ($voice) $body = '🎤 Voice message'; elseif ($body === '') $body = '📎 ' . $name;
-    $dir = __DIR__ . '/files';
-    if (!is_dir($dir) || !is_writable($dir)) fail(503, 'The files directory must exist and be writable by PHP.');
+    $dir = rtrim(lchat_file_path('', true), '/');
+    if (!is_dir($dir) || !is_writable($dir)) fail(503, 'Folder files must exist and be accessible PHP for recording.');
     $storedName = bin2hex(random_bytes(24)) . '.bin'; $stored = $dir . '/' . $storedName;
     if (!move_uploaded_file($file['tmp_name'], $stored)) throw new RuntimeException('Cannot save upload.');
     chmod($stored, 0640);
@@ -52,5 +52,5 @@ try {
         if ($existing && (int)$existing['chat_id'] === $chatId) result(['id' => $existing['id']]);
     }
     error_log('LChat upload: ' . $e->getMessage());
-    fail($e instanceof DomainException ? 422 : 500, $e instanceof DomainException ? $e->getMessage() : 'Could not save the file. Check the PHP log.');
+    fail($e instanceof DomainException ? 422 : 500, $e instanceof DomainException ? $e->getMessage() : 'Failed to save file. Check the log PHP.');
 }

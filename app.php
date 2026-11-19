@@ -8,11 +8,16 @@ ini_set('display_errors', '0');
 ini_set('session.use_strict_mode', '1');
 ini_set('session.use_only_cookies', '1');
 
+function lchat_file_path(string $name, bool $write = false): string {
+    $directory = (string)(config()['storage_dir'] ?? (__DIR__ . '/files'));
+    return rtrim($directory, '/' . chr(92)) . '/' . $name;
+}
+
 function config(): array {
     static $config;
     if ($config === null) {
         $path = getenv('LCHAT_CONFIG') ?: __DIR__ . '/config.php';
-        if (!is_file($path)) fail(503, 'Configure config.php first, then open install.php.');
+        if (!is_file($path)) fail(503, 'Set up first config.php and open install.php.');
         $config = require $path;
         $local = dirname($path) . '/selfhost/settings.php';
         if (is_file($local)) {
@@ -63,6 +68,21 @@ function db(): PDO {
 function query(string $sql, array $params = []): PDOStatement {
     $s = db()->prepare($sql); $s->execute($params); return $s;
 }
+/** Delete one message while keeping its existing chat/author restrictions. */
+function delete_message_row(int $messageId, int $chatId, ?int $authorId = null): int {
+    $sql = 'DELETE FROM messages WHERE id = ? AND chat_id = ?';
+    $params = [$messageId, $chatId];
+    if ($authorId !== null) { $sql .= ' AND user_id = ?'; $params[] = $authorId; }
+    $pdo = db();
+    if ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) !== 'mysql') return query($sql, $params)->rowCount();
+    // This host's native MySQL prepared DELETE can fail with ER_NEED_REPREPARE
+    // (1615) when MySQL loads the many dependent message tables. Keep this
+    // workaround limited to this parameterized statement and restore the mode.
+    $emulated = (bool)$pdo->getAttribute(PDO::ATTR_EMULATE_PREPARES);
+    if (!$emulated) $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, true);
+    try { return query($sql, $params)->rowCount(); }
+    finally { if (!$emulated) $pdo->setAttribute(PDO::ATTR_EMULATE_PREPARES, false); }
+}
 function one(string $sql, array $params = []): ?array { return query($sql, $params)->fetch() ?: null; }
 function request_is_https(): bool {
     if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') return true;
@@ -74,7 +94,7 @@ function authenticate_web_gateway(): void {
     $secret = (string)(config()['proxy_secret'] ?? '');
     $supplied = (string)($_SERVER['HTTP_X_LCHAT_PROXY_KEY'] ?? '');
     $ip = (string)($_SERVER['HTTP_X_LCHAT_CLIENT_IP'] ?? '');
-    if (strlen($secret) < 32 || str_starts_with($secret, 'REPLACE_') || !hash_equals($secret, $supplied) || !filter_var($ip, FILTER_VALIDATE_IP)) fail(403, 'Доступ к шлюзу запрещён.');
+    if (strlen($secret) < 32 || str_starts_with($secret, 'REPLACE_') || !hash_equals($secret, $supplied) || !filter_var($ip, FILTER_VALIDATE_IP)) fail(403, 'Access to the gateway is prohibited.');
     $_SERVER['REMOTE_ADDR'] = $ip;
 }
 authenticate_web_gateway();
@@ -103,8 +123,8 @@ function login_session(int $id): void {
 }
 function require_user(array $ctx): array {
     $user = $ctx['uid'] ? one('SELECT id, username, name, last_seen FROM users WHERE id = ?', [$ctx['uid']]) : null;
-    if (!$user) fail(401, 'Sign in to your account.');
-    if (service_ban((int)$user['id'])) fail(403, 'Your account has been banned by an administrator.');
+    if (!$user) fail(401, 'Log in to your account.');
+    if (service_ban((int)$user['id'])) fail(403, 'Your account is blocked by the administrator.');
     return $user;
 }
 function field(array $data, string $key, int $min, int $max): string {
@@ -112,22 +132,22 @@ function field(array $data, string $key, int $min, int $max): string {
     if (!is_string($v)) fail(422, 'Invalid field: ' . $key);
     $v = trim($v);
     $n = mb_strlen($v, 'UTF-8');
-    if ($n < $min || $n > $max) fail(422, 'Field “' . $key . '”: from ' . $min . ' to ' . $max . ' characters.');
+    if ($n < $min || $n > $max) fail(422, 'Field «' . $key . '»: from ' . $min . ' up to ' . $max . ' characters.');
     return $v;
 }
 const MESSAGE_TEXT_MAX_BYTES = 10 * 1024 * 1024;
 const MESSAGE_REQUEST_MAX_BYTES = 64 * 1024 * 1024;
 function message_text(array $data): string {
     $v = $data['body'] ?? null;
-    if (!is_string($v) || !mb_check_encoding($v, 'UTF-8')) fail(422, 'Invalid message text.');
+    if (!is_string($v) || !mb_check_encoding($v, 'UTF-8')) fail(422, 'Incorrect message text.');
     $v = trim($v);
-    if ($v === '' || strlen($v) > MESSAGE_TEXT_MAX_BYTES) fail(422, 'Message text must be at most 10 MiB in UTF-8.');
-    if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $v)) fail(422, 'Message contains unsupported control characters.');
+    if ($v === '' || strlen($v) > MESSAGE_TEXT_MAX_BYTES) fail(422, 'Message text: maximum 10 MiB per UTF-8.');
+    if (preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $v)) fail(422, 'Text contains unsupported control characters.');
     return $v;
 }
 function member(int $chat, int $uid): array {
     $row = one('SELECT c.*, m.role, m.last_read FROM chats c JOIN members m ON m.chat_id = c.id WHERE c.id = ? AND m.user_id = ?', [$chat, $uid]);
-    if (!$row) fail(403, 'You cannot access this chat.');
+    if (!$row) fail(403, 'No access to this chat.');
     return $row;
 }
 function rate(string $key, int $max, int $seconds): void {
@@ -159,12 +179,12 @@ function room(string $token, array $ctx): array {
     $r = one('SELECT * FROM rooms WHERE token = ?', [$token]);
     if (!$r) fail(404, 'Call not found.');
     if (!$r['is_public']) member((int)$r['chat_id'], (int)require_user($ctx)['id']);
-    if ($r['ended_at'] || $r['expires_at'] < stamp()) fail(410, 'This call has ended. Start a new one.');
+    if ($r['ended_at'] || $r['expires_at'] < stamp()) fail(410, 'This call has already ended. Create a new one.');
     return $r;
 }
 function participant(array $r, string $id, array $ctx): array {
     $p = one('SELECT * FROM participants WHERE id = ? AND room_id = ? AND owner_key = ? AND left_at IS NULL', [$id, $r['id'], hash('sha256', $ctx['actor'])]);
-    if (!$p || $p['last_seen'] < stamp(-40)) fail(403, 'Your connection expired. Rejoin the call.');
+    if (!$p || $p['last_seen'] < stamp(-40)) fail(403, 'Connection timed out. Re-enter the call.');
     return $p;
 }
 function transaction(callable $action): mixed {
@@ -177,8 +197,11 @@ backend_gateway();
 require_once __DIR__ . '/apis/features.php';
 require_once __DIR__ . '/apis/rewards.php';
 require_once __DIR__ . '/apis/bot_accounts.php';
-require_once __DIR__ . '/apis/site_settings.php';
 require_once __DIR__ . '/apis/bot_creator.php';
+require_once __DIR__ . '/apis/service_bot.php';
+require_once __DIR__ . '/apis/user_sites.php';
 require_once __DIR__ . '/apis/bot_platform.php';
 require_once __DIR__ . '/apis/bot_files.php';
 require_once __DIR__ . '/apis/presence.php';
+
+require_once __DIR__ . '/apis/site_settings.php';

@@ -21,7 +21,7 @@ function bot_account_create(int $ownerId, string $name, string $username): array
     $name = trim($name);
     $username = strtolower(trim(ltrim($username, '@')));
     if (mb_strlen($name, 'UTF-8') < 2 || mb_strlen($name, 'UTF-8') > 60) throw new DomainException('Bot name: 2 to 60 characters.');
-    if (!preg_match('/^[a-z][a-z0-9_]{2,28}bot$/D', $username)) throw new DomainException('Username must start with a letter and end in bot; Latin letters, digits, and underscores are allowed.');
+    if (!preg_match('/^[a-z][a-z0-9_]{2,28}bot$/D', $username)) throw new DomainException('The login must begin with a letter and end with bot; Latin letters, numbers and _.');
     $create = static function () use ($ownerId, $name, $username): array {
         query('UPDATE users SET name = name WHERE id = ?', [$ownerId]);
         $count = one('SELECT COUNT(*) AS n FROM bot_accounts WHERE owner_user_id = ?', [$ownerId]);

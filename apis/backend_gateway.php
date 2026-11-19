@@ -4,32 +4,35 @@ if (!defined('LCHAT_INTERNAL')) { http_response_code(404); exit; }
 
 // The public website proxies only LChat PHP endpoints, never an arbitrary URL.
 function backend_gateway(): void {
-    if (PHP_SAPI === 'cli' || (defined('LCHAT_LOCAL_PAGE') && LCHAT_LOCAL_PAGE)) return;
+    if (PHP_SAPI === 'cli') return;
     // The website shell is served locally without accessing the backend configuration.
-    if (basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) === 'index.php') return;
+    if (realpath((string)($_SERVER['SCRIPT_FILENAME'] ?? '')) === realpath(dirname(__DIR__) . '/index.php')) return;
     $settings = config()['backend'] ?? ['mode' => 'host'];
     if (($settings['mode'] ?? 'host') === 'host') return;
-    if (($settings['mode'] ?? '') !== 'pc') fail(503, 'Invalid backend mode.');
-    if (!empty($_SERVER['HTTP_X_LCHAT_GATEWAY'])) fail(508, 'Backend proxy loop detected.');
+    if (($settings['mode'] ?? '') !== 'pc') fail(503, 'Invalid server mode.');
+    if (!empty($_SERVER['HTTP_X_LCHAT_GATEWAY'])) fail(508, 'Server connection loop detected.');
     $url = trim((string)($settings['url'] ?? ''));
     $parts = parse_url($url);
-    if (!is_array($parts) || ($parts['scheme'] ?? '') !== 'https' || empty($parts['host']) || isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])) fail(503, 'Set the PC backend HTTPS URL in config.php.');
-    if (!extension_loaded('curl')) fail(503, 'PHP curl is required to connect to the PC.');
-    $file = basename((string)($_SERVER['SCRIPT_NAME'] ?? ''));
-    $allowed = ['api.php','admin.php','bot-api.php','bot-file.php','bot-manage.php','avatar.php','channel.php','download.php','upload.php','install.php','settings.php','profile.php'];
+    if (!is_array($parts) || ($parts['scheme'] ?? '') !== 'https' || empty($parts['host']) || isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])) fail(503, 'For PC please indicate HTTPS-server address in config.php.');
+    if (!extension_loaded('curl')) fail(503, 'To connect to a PC, you need PHP curl.');
+    $base = realpath(dirname(__DIR__));
+    $script = realpath((string)($_SERVER['SCRIPT_FILENAME'] ?? ''));
+    if ($script === false || !str_starts_with(str_replace('\\', '/', $script), str_replace('\\', '/', $base) . '/')) fail(404, 'Page not found.');
+    $file = str_replace('\\', '/', substr($script, strlen($base) + 1));
+    $allowed = ['admin.php', 'api.php', 'application.php', 'avatar.php', 'bot-api.php', 'bot-file.php', 'bot-manage.php', 'channel.php', 'cookies.php', 'docs.php', 'download.php', 'gift-animation.php', 'gift-purchase.php', 'install.php', 'legal.php', 'pay.php', 'premium.php', 'privacy.php', 'profile.php', 'pyweb.php', 'reset-password.php', 'rewards.php', 'rules.php', 'settings.php', 'sitecreator-api.php', 'sitecreator.php', 'support.php', 'terms.php', 'upload.php', 'user-profile.php', 'verify-email.php', 'creator/index.php', 'sites/render.php', 'apis/bots/pages/render.php'];
     if (!in_array($file, $allowed, true)) fail(404, 'Page not found.');
     $method = strtoupper((string)($_SERVER['REQUEST_METHOD'] ?? 'GET'));
     if (!in_array($method, ['GET','POST','HEAD'], true)) fail(405, 'Method not supported.');
     $action = (string)($_GET['action'] ?? ''); $methodName = (string)($_GET['method'] ?? '');
     $largeText = ($file === 'api.php' && in_array($action, ['message.send', 'message.edit'], true)) || ($file === 'admin.php' && $action === 'chat.send') || ($file === 'bot-api.php' && in_array($methodName, ['sendMessage', 'editMessageText'], true));
-    $maxBody = $largeText ? 64 * 1024 * 1024 : 10 * 1024 * 1024;
+    $maxBody = 210 * 1024 * 1024;
     if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > $maxBody) fail(413, 'Request too large.');
     $destination = rtrim($url, '/') . '/' . $file;
     if (!empty($_SERVER['QUERY_STRING'])) $destination .= '?' . $_SERVER['QUERY_STRING'];
     $secret = (string)($settings['proxy_secret'] ?? '');
-    if (strlen($secret) < 32 || str_starts_with($secret, 'REPLACE_') || preg_match('/[\x00-\x20\x7f]/', $secret)) fail(503, 'Set a shared gateway secret of at least 32 characters.');
+    if (strlen($secret) < 32 || str_starts_with($secret, 'REPLACE_') || preg_match('/[\x00-\x20\x7f]/', $secret)) fail(503, 'Specify a shared gateway secret of at least 32 characters.');
     $clientIp = (string)($_SERVER['REMOTE_ADDR'] ?? '');
-    if (!filter_var($clientIp, FILTER_VALIDATE_IP)) fail(503, 'Could not determine the client IP.');
+    if (!filter_var($clientIp, FILTER_VALIDATE_IP)) fail(503, 'Failed to determine client address.');
     $headers = ['X-LChat-Gateway: 1', 'X-LChat-Proxy-Key: ' . $secret, 'X-LChat-Client-IP: ' . $clientIp, 'Accept-Encoding: identity'];
     foreach (['HTTP_COOKIE' => 'Cookie', 'HTTP_AUTHORIZATION' => 'Authorization', 'REDIRECT_HTTP_AUTHORIZATION' => 'Authorization', 'HTTP_X_LCHAT_BOT_TOKEN' => 'X-LChat-Bot-Token', 'HTTP_X_CSRF_TOKEN' => 'X-CSRF-Token', 'HTTP_RANGE' => 'Range', 'HTTP_IF_NONE_MATCH' => 'If-None-Match'] as $key => $name) {
         if (!empty($_SERVER[$key]) && !str_contains($_SERVER[$key], "\r") && !str_contains($_SERVER[$key], "\n")) $headers[$name] = $name . ': ' . $_SERVER[$key];
@@ -58,14 +61,14 @@ function backend_gateway(): void {
             return strlen($line);
         },
         CURLOPT_WRITEFUNCTION => static function ($handle, string $chunk) use (&$size, $temp): int {
-            $size += strlen($chunk); if ($size > 64 * 1024 * 1024) return 0;
+            $size += strlen($chunk); if ($size > 210 * 1024 * 1024) return 0;
             return fwrite($temp, $chunk);
         },
     ]);
     if ($method === 'POST') curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
     if ($method === 'HEAD') curl_setopt($ch, CURLOPT_NOBODY, true);
-    $ok = curl_exec($ch); $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE); $errorCode = curl_errno($ch); $errorText = curl_error($ch); curl_close($ch);
-    if (!$ok || $status < 100) { error_log('LChat gateway: cURL error ' . $errorCode . ' ' . $errorText); fclose($temp); fail(502, 'Could not reach the PC backend. Check HTTPS and server availability.'); }
+    $ok = curl_exec($ch); $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE); $errorCode = curl_errno($ch); $errorText = curl_error($ch); unset($ch);
+    if (!$ok || $status < 100) { error_log('LChat gateway: cURL error ' . $errorCode . ' ' . $errorText); fclose($temp); fail(502, 'Failed to connect to the server on PC. Check HTTPS and server availability.'); }
     http_response_code($status);
     foreach ($received as [$name, $value]) {
         if (str_contains($value, "\r") || str_contains($value, "\n")) continue;

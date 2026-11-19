@@ -13,13 +13,13 @@ function rewards_catalog(): array {
     $items=[
         'star'=>['⭐','Star',10,-1,'special','original'],
         'heart'=>['💜','Heart',20,0,'love','original'],
-        'bear'=>['🧸','Teddy bear',25,1,'love','original'],
+        'bear'=>['🧸','Bear',25,1,'love','original'],
         'box'=>['🎁','Surprise',25,2,'party','original'],
         'rose'=>['🌹','Rose',25,3,'love','original'],
         'cake'=>['🎂','Cake',50,4,'party','original'],
         'flower'=>['🌷','Flower',30,5,'love','original'],
         'rocket'=>['🚀','Rocket',100,6,'special','original'],
-        'cup'=>['🏆','Trophy',100,7,'special','original'],
+        'cup'=>['🏆','Cup',100,7,'special','original'],
         'diamond'=>['💎','Diamond',100,8,'special','original'],
     ];
     $base=$items;
@@ -33,8 +33,9 @@ function rewards_catalog(): array {
     foreach (require __DIR__.'/gift-extra.php' as [$id,$emoji,$ru,$en,$price,$category]) {
         if (isset($items[$id])) throw new LogicException('Duplicate gift identifier');
         $sprite=-1;$sheet='';foreach($sheets as $name=>$ids){$position=array_search($id,$ids,true);if($position!==false){$sprite=$position;$sheet=$name;break;}}
-        $items[$id]=[$emoji,$en,$price,$sprite,$category,'original',$sheet];
+        $items[$id]=[$emoji,$ru,$price,$sprite,$category,'original',$sheet];
     }
+    foreach (require __DIR__.'/gift-tgs-catalog.php' as $id=>$gift) { if (isset($items[$id])) throw new LogicException('Duplicate gift identifier'); $items[$id]=$gift; }
     return $items;
 }
 function rewards_wallet(int $uid): array {
@@ -42,9 +43,9 @@ function rewards_wallet(int $uid): array {
 }
 function rewards_purchase(array $user,string $gift,string $recipientName,string $nonce): array {
     $catalog=rewards_catalog();
-    if(!isset($catalog[$gift]) || !preg_match('/^[a-f0-9]{48}$/D',$nonce)) throw new DomainException('Invalid gift.');
+    if(!isset($catalog[$gift]) || !preg_match('/^[a-f0-9]{48}$/D',$nonce)) throw new DomainException('Incorrect gift.');
     $recipientName=strtolower(ltrim(trim($recipientName),'@'));
-    if($recipientName!=='' && !preg_match('/^[a-z0-9_]{3,32}$/D',$recipientName)) throw new DomainException('Enter a valid recipient username.');
+    if($recipientName!=='' && !preg_match('/^[a-z0-9_]{3,32}$/D',$recipientName)) throw new DomainException('Enter the correct recipient login.');
     $recipient=$recipientName===''?$user:one('SELECT id,username FROM users WHERE username=?',[$recipientName]);
     if(!$recipient) throw new DomainException('Recipient not found.');
     $recipientId=(int)$recipient['id'];

@@ -19,7 +19,7 @@
   callLink.type = 'button';
   callLink.dataset.proxyTarget = 'create-link';
   callLink.dataset.menuIcon = '\\uf1b9';
-  callLink.textContent = document.documentElement.lang === 'ru' ? 'Звонок по ссылке' : 'Call by link';
+  callLink.textContent = document.documentElement.lang === 'ru' ? 'Call via link' : 'Call by link';
   menu.querySelector('a')?.before(callLink);
 
   menu.querySelectorAll('[data-menu-icon]').forEach(item => {
@@ -117,7 +117,7 @@
     emojiButton.id = 'emoji-button';
     emojiButton.type = 'button';
     emojiButton.className = 'icon-button';
-    emojiButton.title = document.documentElement.lang === 'ru' ? 'Эмодзи' : 'Emoji';
+    emojiButton.title = document.documentElement.lang === 'ru' ? 'Emoji' : 'Emoji';
     emojiButton.setAttribute('aria-label', emojiButton.title);
     emojiButton.setAttribute('aria-expanded', 'false');
     const glyph = document.createElement('span');

@@ -4,6 +4,7 @@ define('LCHAT_INTERNAL', true);
 require __DIR__ . '/app.php';
 require __DIR__ . '/apis/invites.php';
 require __DIR__ . '/apis/sync.php';
+require __DIR__ . '/apis/registration-mail.php';
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 try {
@@ -31,8 +32,8 @@ try {
     if ($action === 'mobile.release') {
         $user = require_user($ctx); $id = field($data, 'id', 32, 32); $token = field($data, 'token', 48, 48);
         $lease = one('SELECT p.id, p.room_id, p.user_id, p.owner_key FROM participants p JOIN rooms r ON r.id = p.room_id WHERE p.id = ? AND r.token = ?', [$id, $token]);
-        if (!$lease) fail(404, 'The connection has already been removed.');
-        if ((int)$lease['user_id'] !== (int)$user['id'] || !hash_equals($lease['owner_key'], hash('sha256', $ctx['actor']))) fail(403, 'This connection belongs to another session.');
+        if (!$lease) fail(404, 'Connection already deleted.');
+        if ((int)$lease['user_id'] !== (int)$user['id'] || !hash_equals($lease['owner_key'], hash('sha256', $ctx['actor']))) fail(403, 'This is connecting another session.');
         query('UPDATE participants SET left_at = ? WHERE id = ?', [stamp(), $id]);
         result(['ok' => true]);
     }
@@ -65,32 +66,35 @@ try {
         rate('auth-ip:' . $ip, 30, 900);
         if ($action === 'register') {
             if (!(site_settings()['registration_open'])) fail(403, 'Registration is closed.');
+            if (($data['accept_terms'] ?? null) !== '1') fail(422, 'Accept the user agreement and read the privacy policy. If you are using the application, register on the site.');
             rate('register:' . $ip, 8, 3600);
             $name = field($data, 'name', 2, 60);
             $username = strtolower(field($data, 'username', 3, 32));
-            if (!preg_match('/^[a-z0-9_]{3,32}$/D', $username)) fail(422, 'Username: 3 to 32 Latin letters, digits, or underscores.');
-            if (str_ends_with($username, 'bot') || $username === 'botcreator') fail(422, 'This username is reserved for bots.');
+            if (!preg_match('/^[a-z0-9_]{3,32}$/D', $username)) fail(422, 'Login: Latin letters, numbers and _, from 3 to 32 characters.');
+            if (str_ends_with($username, 'bot') || $username === 'botcreator') fail(422, 'This login is reserved for bots.');
             $email = strtolower(field($data, 'email', 3, 190));
-            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) fail(422, 'Enter a valid email address.');
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) fail(422, 'Please indicate the correct email.');
             $password = $data['password'] ?? '';
-            if (!is_string($password) || mb_strlen($password, 'UTF-8') < 10 || strlen($password) > 72) fail(422, 'Password: at least 10 characters and at most 72 bytes.');
-            try {
-                query('INSERT INTO users (username, email, name, password_hash, created_at, last_seen) VALUES (?, ?, ?, ?, ?, ?)', [$username, $email, $name, password_hash($password, PASSWORD_DEFAULT), stamp(), stamp()]);
-            } catch (PDOException $e) {
-                if (str_starts_with((string)$e->getCode(), '23')) fail(409, 'This username or email is taken.');
-                throw $e;
-            }
-            login_session((int)db()->lastInsertId());
+            if (!is_string($password) || mb_strlen($password, 'UTF-8') < 10 || strlen($password) > 72) fail(422, 'Password: minimum 10 characters, maximum 72 bytes.');
+            if (one('SELECT id FROM users WHERE username = ? OR email = ?', [$username,$email])) fail(409, 'This login or email already taken.');
+            registration_table();
+            rate('register-email:' . hash('sha256', $email), 4, 3600);
+            $token=bin2hex(random_bytes(32));
+            query('DELETE FROM pending_registrations WHERE expires_at < ?', [stamp()]);
+            query('INSERT INTO pending_registrations (token_hash,username,email,name,password_hash,expires_at,created_at) VALUES (?,?,?,?,?,?,?)', [hash('sha256',$token),$username,$email,$name,password_hash($password,PASSWORD_DEFAULT),stamp(86400),stamp()]);
+            try { registration_send($email,$token); }
+            catch (Throwable $e) { query('DELETE FROM pending_registrations WHERE token_hash = ?', [hash('sha256',$token)]); error_log('LChat registration email: '.$e->getMessage()); fail(503, 'Failed to send email. Please try again later.'); }
+            result(['ok'=>true,'verification_required'=>true]);
         } else {
             $login = strtolower(field($data, 'login', 3, 190));
             rate('auth-account:' . $login, 15, 900);
             $password = $data['password'] ?? '';
             $u = one('SELECT * FROM users WHERE username = ? OR email = ?', [$login, $login]);
-            if ($u && (one('SELECT bot_user_id FROM bot_accounts WHERE bot_user_id = ?', [$u['id']]) || one('SELECT user_id FROM system_bots WHERE user_id = ?', [$u['id']]))) fail(401, 'Use an API token for a bot.');
+            if ($u && (one('SELECT bot_user_id FROM bot_accounts WHERE bot_user_id = ?', [$u['id']]) || one('SELECT user_id FROM system_bots WHERE user_id = ?', [$u['id']]))) fail(401, 'For bot use API-token.');
             // Same expensive verification even for unknown usernames.
             $hash = $u['password_hash'] ?? '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi';
-            if (!is_string($password) || strlen($password) > 72 || !password_verify($password, $hash) || !$u) fail(401, 'Incorrect username or password.');
-            if (service_ban((int)$u['id'])) fail(403, 'Your account has been banned by an administrator.');
+            if (!is_string($password) || strlen($password) > 72 || !password_verify($password, $hash) || !$u) fail(401, 'Incorrect login or password.');
+            if (service_ban((int)$u['id'])) fail(403, 'Your account is blocked by the administrator.');
             if (password_needs_rehash($hash, PASSWORD_DEFAULT)) query('UPDATE users SET password_hash = ? WHERE id = ?', [password_hash($password, PASSWORD_DEFAULT), $u['id']]);
             login_session((int)$u['id']);
         }
@@ -107,7 +111,7 @@ try {
             $chatId = (int)($data['chat_id'] ?? 0);
             $chat = $chatId ? member($chatId, (int)$u['id']) : null;
             if (($chat['kind'] ?? '') === 'channel') fail(422, 'Calls are available in chats and groups.');
-            $title = $chat ? ($chat['kind'] === 'direct' ? 'Private call' : $chat['title']) : field($data, 'title', 2, 80);
+            $title = $chat ? ($chat['kind'] === 'direct' ? 'Personal call' : $chat['title']) : field($data, 'title', 2, 80);
             $public = $chat ? 0 : 1;
             $token = bin2hex(random_bytes(24));
             $token = transaction(function() use ($token, $title, $chatId, $u, $public, $data) {
@@ -124,7 +128,7 @@ try {
         $token = field($data, 'token', 48, 48); $r = room($token, $ctx);
         if ($action === 'room.info') result(['room' => ['title' => $r['title'], 'video' => (bool)$r['video'], 'is_public' => (bool)$r['is_public'], 'owner' => (int)$r['owner_id'] === $ctx['uid']], 'limit' => site_settings()['max_call_participants']]);
         if ($action === 'room.end') {
-            if ((int)$r['owner_id'] !== $ctx['uid']) fail(403, 'Only the call creator can end it.');
+            if ((int)$r['owner_id'] !== $ctx['uid']) fail(403, 'Only the originator can end a call.');
             query('UPDATE rooms SET ended_at = ? WHERE id = ?', [stamp(), $r['id']]); result(['ok' => true]);
         }
         if ($action === 'room.join') {
@@ -137,7 +141,7 @@ try {
                 // Serialize admission by locking the room row; SQLite serializes writes.
                 query('UPDATE rooms SET title = title WHERE id = ?', [$r['id']]);
                 $fresh = one('SELECT ended_at FROM rooms WHERE id = ?', [$r['id']]);
-                if ($fresh['ended_at']) throw new DomainException('The call has ended.');
+                if ($fresh['ended_at']) throw new DomainException('Call ended.');
                 $n = one('SELECT COUNT(*) AS n FROM participants WHERE room_id = ? AND left_at IS NULL AND last_seen >= ?', [$r['id'], stamp(-35)]);
                 if ((int)$n['n'] >= (int)(site_settings()['max_call_participants'])) throw new DomainException('The room is full.');
                 query('INSERT INTO participants (id, room_id, owner_key, user_id, name, last_seen, joined_at) VALUES (?, ?, ?, ?, ?, ?, ?)', [$id, $r['id'], hash('sha256', $ctx['actor']), $u['id'] ?? null, $name, stamp(), stamp()]);
@@ -162,16 +166,16 @@ try {
         if ($action === 'room.signals') {
             rate('signal-batch:' . $id, 120, 60);
             $packets = $data['packets'] ?? null;
-            if (!is_array($packets) || !$packets || count($packets) > 24) fail(422, 'Invalid signaling packet.');
+            if (!is_array($packets) || !$packets || count($packets) > 24) fail(422, 'Incorrect signal packet.');
             $results = transaction(function() use ($packets, $r, $id) {
                 $results = [];
                 $insert = db()->prepare('INSERT INTO signals (room_id, sender, recipient, payload, created_at) VALUES (?, ?, ?, ?, ?)');
                 foreach ($packets as $packet) {
                     $to = is_array($packet) ? ($packet['to'] ?? '') : ''; $payload = is_array($packet) ? ($packet['payload'] ?? null) : null;
-                    if (!is_string($to) || !preg_match('/^[a-f0-9]{32}$/D', $to) || !is_array($payload) || !in_array($payload['type'] ?? '', ['offer', 'answer', 'candidate', 'restart'], true)) { $results[] = ['status' => 422, 'error' => 'Invalid signal.']; continue; }
-                    if (!one('SELECT id FROM participants WHERE id = ? AND room_id = ? AND left_at IS NULL AND last_seen >= ?', [$to, $r['id'], stamp(-35)])) { $results[] = ['status' => 404, 'error' => 'A participant left the call.']; continue; }
+                    if (!is_string($to) || !preg_match('/^[a-f0-9]{32}$/D', $to) || !is_array($payload) || !in_array($payload['type'] ?? '', ['offer', 'answer', 'candidate', 'restart'], true)) { $results[] = ['status' => 422, 'error' => 'Incorrect signal.']; continue; }
+                    if (!one('SELECT id FROM participants WHERE id = ? AND room_id = ? AND left_at IS NULL AND last_seen >= ?', [$to, $r['id'], stamp(-35)])) { $results[] = ['status' => 404, 'error' => 'Participant left the call.']; continue; }
                     $json = json_encode($payload, JSON_THROW_ON_ERROR);
-                    if (strlen($json) > 48000) { $results[] = ['status' => 413, 'error' => 'Signal too large.']; continue; }
+                    if (strlen($json) > 48000) { $results[] = ['status' => 413, 'error' => 'Signal too big.']; continue; }
                     $insert->execute([$r['id'], $id, $to, $json, stamp()]); $results[] = ['ok' => true];
                 }
                 return $results;
@@ -180,11 +184,11 @@ try {
         if ($action === 'room.signal') {
             rate('signal:' . $id, 1200, 60);
             $to = field($data, 'to', 32, 32);
-            if (!one('SELECT id FROM participants WHERE id = ? AND room_id = ? AND left_at IS NULL AND last_seen >= ?', [$to, $r['id'], stamp(-35)])) fail(404, 'A participant left the call.');
+            if (!one('SELECT id FROM participants WHERE id = ? AND room_id = ? AND left_at IS NULL AND last_seen >= ?', [$to, $r['id'], stamp(-35)])) fail(404, 'Participant left the call.');
             $payload = $data['payload'] ?? null;
-            if (!is_array($payload) || !in_array($payload['type'] ?? '', ['offer', 'answer', 'candidate', 'restart'], true)) fail(422, 'Invalid signal.');
+            if (!is_array($payload) || !in_array($payload['type'] ?? '', ['offer', 'answer', 'candidate', 'restart'], true)) fail(422, 'Incorrect signal.');
             $json = json_encode($payload, JSON_THROW_ON_ERROR);
-            if (strlen($json) > 48000) fail(413, 'Signal too large.');
+            if (strlen($json) > 48000) fail(413, 'Signal too big.');
             query('INSERT INTO signals (room_id, sender, recipient, payload, created_at) VALUES (?, ?, ?, ?, ?)', [$r['id'], $id, $to, $json, stamp()]); result(['ok' => true]);
         }
         if ($action === 'room.leave') {
@@ -239,15 +243,15 @@ try {
     }
     if ($action === 'bot.callback.status') {
         $id = (string)($data['id'] ?? '');
-        if (!preg_match('/^[a-f0-9]{32}$/D', $id)) fail(422, 'Invalid button identifier.');
+        if (!preg_match('/^[a-f0-9]{32}$/D', $id)) fail(422, 'Incorrect button identifier.');
         $callback = one('SELECT answer_text, answered_at FROM bot_callback_queries WHERE id = ? AND from_user_id = ?', [$id, $uid]);
-        if (!$callback) fail(404, 'Callback not found.');
+        if (!$callback) fail(404, 'Press not found.');
         result(['answered' => $callback['answered_at'] !== null, 'text' => $callback['answer_text'] ?? '']);
     }
     if ($action === 'chat.direct') {
         rate('chat-create:' . $uid, 40, 600);
         $other = (int)($data['user_id'] ?? 0);
-        if ($other === $uid || !one('SELECT id FROM users WHERE id = ?', [$other])) fail(422, 'Choose another user.');
+        if ($other === $uid || !one('SELECT id FROM users WHERE id = ?', [$other])) fail(422, 'Select another user.');
         $key = min($uid, $other) . ':' . max($uid, $other);
         $existing = one('SELECT id FROM chats WHERE direct_key = ?', [$key]);
         if ($existing) result(['id' => $existing['id']]);
@@ -289,13 +293,13 @@ try {
         rate('bot-callback:' . $uid, 60, 60);
         $messageId = (int)($data['message_id'] ?? 0);
         $callbackData = $data['callback_data'] ?? null;
-        if ($messageId < 1 || !is_string($callbackData) || strlen($callbackData) < 1 || strlen($callbackData) > 64) fail(422, 'Invalid button.');
+        if ($messageId < 1 || !is_string($callbackData) || strlen($callbackData) < 1 || strlen($callbackData) > 64) fail(422, 'Incorrect button.');
         $target = one('SELECT m.user_id AS bot_id, k.markup_json FROM messages m JOIN bot_message_markup k ON k.message_id = m.id JOIN bot_accounts b ON b.bot_user_id = m.user_id JOIN members mem ON mem.chat_id = m.chat_id AND mem.user_id = m.user_id WHERE m.id = ? AND m.chat_id = ?', [$messageId, $chatId]);
-        if (!$target || service_ban((int)$target['bot_id'])) fail(404, 'This button is no longer available.');
+        if (!$target || service_ban((int)$target['bot_id'])) fail(404, 'Button no longer available.');
         $markup = json_decode($target['markup_json'], true);
         $matches = false;
         foreach (($markup['inline_keyboard'] ?? []) as $row) foreach ($row as $button) if (($button['callback_data'] ?? null) === $callbackData) $matches = true;
-        if (!$matches) fail(404, 'This button is no longer available.');
+        if (!$matches) fail(404, 'Button no longer available.');
         $id = bin2hex(random_bytes(16));
         query('INSERT INTO bot_callback_queries (id, bot_user_id, message_id, from_user_id, data, created_at) VALUES (?, ?, ?, ?, ?, ?)', [$id, $target['bot_id'], $messageId, $uid, $callbackData, stamp()]);
         bot_platform_publish_callback((int)$target['bot_id'], $id);
@@ -306,13 +310,13 @@ try {
         result(['members' => $members]);
     }
     if ($action === 'chat.update') {
-        if (!in_array($chat['kind'], ['group', 'channel'], true) || $chat['role'] !== 'owner') fail(403, 'Only the owner can edit a group or channel.');
+        if (!in_array($chat['kind'], ['group', 'channel'], true) || $chat['role'] !== 'owner') fail(403, 'Only the owner can change the group or channel.');
         $title = field($data, 'title', 2, 80);
         query('UPDATE chats SET title = ? WHERE id = ?', [$title, $chatId]);
         result(['ok' => true, 'title' => $title]);
     }
     if ($action === 'channel.remove') {
-        if ($chat['kind'] !== 'channel' || $chat['role'] !== 'owner') fail(403, 'Only the owner can edit a group or channel.');
+        if ($chat['kind'] !== 'channel' || $chat['role'] !== 'owner') fail(403, 'Only the owner can change the group or channel.');
         $other = (int)($data['user_id'] ?? 0);
         if ($other < 1 || $other === $uid) fail(422, 'Invalid member.');
         query('DELETE FROM members WHERE chat_id = ? AND user_id = ?', [$chatId, $other]);
@@ -321,19 +325,19 @@ try {
     if ($action === 'channel.update') {
         if($chat['kind']!=='channel'||$chat['role']!=='owner')fail(403,'Only the owner can change the channel address.');$slug=channel_slug($data);try{query('UPDATE channel_details SET slug=? WHERE chat_id=?',[$slug,$chatId]);}catch(PDOException $e){if(str_starts_with((string)$e->getCode(),'23'))fail(409,'This address is already taken.');throw $e;}result(['slug'=>$slug]);
     }
-    if ($action === 'channel.leave') {if($chat['kind']!=='channel'||$chat['role']==='owner')fail(403,'The owner must remain in the channel.');query('DELETE FROM members WHERE chat_id=? AND user_id=?',[$chatId,$uid]);result(['ok'=>true]);}
+    if ($action === 'channel.leave') {if($chat['kind']!=='channel'||$chat['role']==='owner')fail(403,'The owner remains in the channel.');query('DELETE FROM members WHERE chat_id=? AND user_id=?',[$chatId,$uid]);result(['ok'=>true]);}
     if ($action === 'messages') {
         result(message_page($chatId, $uid, $data));
     }
     if ($action === 'message.edit') {
         rate('message-edit:' . $uid, 60, 60);
         $id = (int)($data['message_id'] ?? 0);
-        if ($id < 1) fail(422, 'Specify a message.');
+        if ($id < 1) fail(422, 'Specify message.');
         $body = message_text($data);
         $message = one('SELECT m.id, m.user_id, m.body, m.edited_at, f.message_id AS file_id, i.message_id AS invite_id, e.message_id AS event_id FROM messages m LEFT JOIN message_files f ON f.message_id = m.id LEFT JOIN message_invites i ON i.message_id = m.id LEFT JOIN message_events e ON e.message_id = m.id WHERE m.id = ? AND m.chat_id = ?', [$id, $chatId]);
         if (!$message) fail(404, 'Message not found.');
-        if ((int)$message['user_id'] !== $uid) fail(403, 'You can edit only your own messages.');
-        if ($message['file_id'] || $message['invite_id'] || $message['event_id']) fail(422, 'This type of message cannot be edited.');
+        if ((int)$message['user_id'] !== $uid) fail(403, 'You can only edit your own messages.');
+        if ($message['file_id'] || $message['invite_id'] || $message['event_id']) fail(422, 'This message type cannot be edited.');
         if (message_read($message['body']) !== $body) transaction(function () use ($id, $chatId, $body): void {
             $at = stamp();
             query('UPDATE messages SET body = ?, edited_at = ? WHERE id = ? AND chat_id = ?', [message_store($body), $at, $id, $chatId]);
@@ -346,7 +350,7 @@ try {
         $id = (int)($data['message_id'] ?? 0);
         $emoji = $data['emoji'] ?? '';
         if ($id < 1 || !one('SELECT id FROM messages WHERE id = ? AND chat_id = ?', [$id, $chatId])) fail(404, 'Message not found.');
-        if (!is_string($emoji) || !in_array($emoji, ['👍', '❤️', '😂', '😮', '😢', '👏'], true)) fail(422, 'Choose a reaction from the list.');
+        if (!is_string($emoji) || !in_array($emoji, ['👍', '❤️', '😂', '😮', '😢', '👏'], true)) fail(422, 'Select a reaction from the list.');
         $existing = one('SELECT emoji FROM message_reactions WHERE message_id = ? AND user_id = ?', [$id, $uid]);
         if ($existing && $existing['emoji'] === $emoji) {
             query('DELETE FROM message_reactions WHERE message_id = ? AND user_id = ?', [$id, $uid]);
@@ -360,20 +364,20 @@ try {
         result(['ok' => true, 'emoji' => $emoji]);
     }
     if ($action === 'message.delete') {
-        $id = (int)($data['message_id'] ?? 0); if ($id < 1) fail(422, 'Specify a message.');
+        $id = (int)($data['message_id'] ?? 0); if ($id < 1) fail(422, 'Specify message.');
         $stored = transaction(function() use ($id, $chatId, $chat, $u, $uid) {
             query('UPDATE chats SET title = title WHERE id = ?', [$chatId]);
             $m = one('SELECT m.chat_id,m.user_id,f.stored_name FROM messages m LEFT JOIN message_files f ON f.message_id=m.id WHERE m.id=?',[$id]);
             if (!$m) return null;
-            if ((int)$m['chat_id'] !== $chatId) throw new DomainException('This message belongs to another chat.');
+            if ((int)$m['chat_id'] !== $chatId) throw new DomainException('Message is in another chat.');
             $admin = service_is_admin($u);
             $owner = in_array($chat['kind'], ['group','channel'], true) && $chat['role'] === 'owner';
-            if ((int)$m['user_id'] !== $uid && !$owner && !$admin) fail(403, 'You can delete only your own messages.');
-            query('DELETE FROM messages WHERE id=? AND chat_id=?',[$id,$chatId]);
+            if ((int)$m['user_id'] !== $uid && !$owner && !$admin) fail(403, 'You can only delete your own messages.');
+            delete_message_row($id, $chatId);
             if ($admin) admin_audit($uid,'message.delete','chat:'.$chatId.' message:'.$id);
             return $m['stored_name'];
         });
-        if (is_string($stored) && preg_match('/^[a-f0-9]{48}\.bin$/D',$stored)) { $path=__DIR__.'/files/'.$stored;if(is_file($path)&&!unlink($path))error_log('LChat: cannot remove deleted attachment'); }
+        if (is_string($stored) && preg_match('/^[a-f0-9]{48}\.bin$/D',$stored)) { $path=lchat_file_path($stored);if(is_file($path)&&!unlink($path))error_log('LChat: cannot remove deleted attachment'); }
         result(['ok'=>true]);
     }
     if ($action === 'message.send') {
@@ -386,9 +390,10 @@ try {
         try { query('INSERT INTO messages (chat_id, user_id, body, nonce, reply_to_id, created_at) VALUES (?, ?, ?, ?, ?, ?)', [$chatId, $uid, message_store($body), $nonce, $replyTo ?: null, stamp()]); }
         catch (PDOException $e) { if (!str_starts_with((string)$e->getCode(), '23')) throw $e; }
         $m = one('SELECT id, chat_id FROM messages WHERE user_id = ? AND nonce = ?', [$uid, $nonce]);
-        if ((int)$m['chat_id'] !== $chatId) fail(409, 'Message identifier already used.');
+        if ((int)$m['chat_id'] !== $chatId) fail(409, 'Message ID already used.');
         bot_platform_dismiss_keyboard($chatId, $uid);
         if ((int)$uid !== bot_creator_id()) bot_creator_process($chatId, $uid, (int)$m['id'], $body);
+        if ((int)$uid !== service_bot_id()) service_bot_process($chatId, $uid, (int)$m['id'], $body);
         bot_platform_publish_message((int)$m['id']);
         result(['id' => $m['id']]);
     }
@@ -399,23 +404,23 @@ try {
         query('UPDATE members SET last_read = CASE WHEN last_read < ? THEN ? ELSE last_read END WHERE chat_id = ? AND user_id = ?', [$last, $last, $chatId, $uid]); result(['ok' => true]);
     }
     if ($action === 'group.invite-reset') {
-        if ($chat['role'] !== 'owner') fail(403, 'Only the owner can reset the link.');
+        if ($chat['role'] !== 'owner') fail(403, 'Only the owner can update the link.');
         $token = bin2hex(random_bytes(24)); query('UPDATE chats SET invite_token = ? WHERE id = ?', [$token, $chatId]); result(['token' => $token]);
     }
     if ($action === 'group.leave') {
         if ($chat['kind'] !== 'group') fail(422, 'This is a private chat.');
-        if ($chat['role'] === 'owner') fail(422, 'The owner must remain in the group.');
+        if ($chat['role'] === 'owner') fail(422, 'The owner remains in the group.');
         query('DELETE FROM members WHERE chat_id = ? AND user_id = ?', [$chatId, $uid]); result(['ok' => true]);
     }
     if ($action === 'group.remove') {
-        if ($chat['kind'] !== 'group' || $chat['role'] !== 'owner') fail(403, 'Only the owner can remove members.');
+        if ($chat['kind'] !== 'group' || $chat['role'] !== 'owner') fail(403, 'Only the owner can exclude members.');
         $other = (int)($data['user_id'] ?? 0);
-        if ($other === $uid) fail(422, 'You cannot remove the owner.');
+        if ($other === $uid) fail(422, 'The owner cannot be excluded.');
         query('DELETE FROM members WHERE chat_id = ? AND user_id = ?', [$chatId, $other]); result(['ok' => true]);
     }
     fail(404, 'Action not found.');
 } catch (DomainException $e) { fail(409, $e->getMessage()); }
 catch (Throwable $e) {
     error_log('LChat: ' . get_class($e) . ' ' . $e->getMessage());
-    fail(500, 'Server error. Check the installation and PHP error log on the hosting server.');
+    fail(500, 'Server error. Check installation and error log PHP on hosting.');
 }

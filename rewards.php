@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         if ($action==='buy') {
             $gift=(string)($_POST['gift']??'');$nonce=(string)($_POST['nonce']??'');
             $recipient=rewards_purchase($user,$gift,(string)($_POST['recipient']??''),$nonce);
-            $successGift=$gift;$notice=(int)$recipient['id']===(int)$user['id']?'The gift was added to your collection.':'Gift sent to @'.$recipient['username'].'.';
+            $successGift=$gift;$notice=(int)$recipient['id']===(int)$user['id']?'The gift was added to your collection.':'Gift sent to user @'.$recipient['username'].'.';
         } elseif (in_array($action,['grant','verify'],true) && $admin) {
             $username=strtolower(ltrim(trim((string)($_POST['username']??'')),'@'));
             if (!preg_match('/^[a-z0-9_]{3,32}$/D',$username)) throw new DomainException('Enter a username.');

@@ -5,29 +5,31 @@
   const input = document.getElementById('message-input');
   const messages = document.getElementById('message-items');
   if (!composer || !input || !messages) return;
-  const scriptUrl = document.currentScript?.src || new URL('assets/animated-emoji.js', document.baseURI).href;
-  const base = new URL('animated-emoji/', scriptUrl).href;
-  const categories = {'All':'All','Smileys':'Smileys','People':'People','Animals and Nature':'Nature','Food and Drink':'Food','Activity':'Activities','Travel and Places':'Places','Objects':'Objects','Symbols':'Symbols','Flags':'Flags'};
-  let entries = [], byId = new Map(), category = 'All', loadPromise;
+  const base = '/assets/lchat-emoji/telegram-v1/';
+  const categories = {'All':'All','Smileys':'Smilies','People':'People','Animals and Nature':'Nature','Food and Drink':'Food','Activity':'Classes','Travel and Places':'Places','Objects':'Items','Symbols':'Symbols','Flags':'Flags'};
+  let entries = [], byId = new Map(), category = 'All', loadPromise, pickerMode = 'emoji';
   const button = document.createElement('button');
   button.type = 'button'; button.className = 'icon-button lce-toggle';
-  button.title = 'Animated emoji'; button.setAttribute('aria-label', button.title);
+  button.title = 'Animated Emoji'; button.setAttribute('aria-label', button.title);
   button.setAttribute('aria-expanded', 'false'); button.textContent = '☺';
   input.before(button);
   const panel = document.createElement('section'); panel.id = 'lce-panel'; panel.className = 'lce-panel'; panel.hidden = true;
   button.setAttribute('aria-controls', panel.id);
-  panel.setAttribute('aria-label', 'Animated emoji');
+  panel.setAttribute('aria-label', 'Animated Emoji');
   const header = document.createElement('div'); header.className = 'lce-header';
-  const title = document.createElement('strong'); title.textContent = 'Animated emoji';
+  const title = document.createElement('strong'); title.textContent = 'Animated Emoji';
   const close = document.createElement('button'); close.type = 'button'; close.className = 'lce-close'; close.textContent = '×'; close.setAttribute('aria-label', 'Close');
   header.append(title, close);
-  const search = document.createElement('input'); search.type = 'search'; search.placeholder = 'Search by name'; search.setAttribute('aria-label', search.placeholder);
+  const search = document.createElement('input'); search.type = 'search'; search.placeholder = 'Search by title'; search.setAttribute('aria-label', search.placeholder);
   const tabs = document.createElement('div'); tabs.className = 'lce-tabs'; tabs.setAttribute('aria-label','Categories');
   const grid = document.createElement('div'); grid.className = 'lce-grid';
   const status = document.createElement('div'); status.className = 'lce-status'; status.setAttribute('aria-live','polite');
-  const credit = document.createElement('a'); credit.className = 'lce-credit'; credit.href = 'https://github.com/Tarikul-Islam-Anik/Telegram-Animated-Emojis'; credit.target = '_blank'; credit.rel = 'noopener noreferrer'; credit.textContent = 'Animation source';
-  panel.append(header, search, tabs, grid, status, credit); document.body.append(panel);
-  function image(item) { const img = document.createElement('img'); img.loading = 'lazy'; img.decoding = 'async'; img.alt = item.name; img.title = item.name; img.draggable = false; img.src = base + item.id + '.webp'; return img; }
+  const credit = document.createElement('a'); credit.className = 'lce-credit'; credit.href = 'https://github.com/Tarikul-Islam-Anik/Telegram-Animated-Emojis'; credit.target = '_blank'; credit.rel = 'noopener noreferrer'; credit.textContent = 'Source of animations';
+  const smoothCredit = document.createElement('a'); smoothCredit.className = 'lce-credit'; smoothCredit.href = 'https://github.com/goforbg/telegram-emoji-gifs'; smoothCredit.target = '_blank'; smoothCredit.rel = 'noopener noreferrer'; smoothCredit.textContent = 'Source of smooth animations';
+  const modes = document.createElement('div'); modes.className = 'lce-modes'; modes.setAttribute('role', 'group'); modes.setAttribute('aria-label', 'Type of images');
+  for (const [mode, label] of [['emoji','Emoji'],['sticker','Stickers']]) { const item=document.createElement('button'); item.type='button'; item.textContent=label; item.dataset.mode=mode; item.setAttribute('aria-pressed',String(mode===pickerMode)); item.addEventListener('click',()=>{pickerMode=mode; for(const other of modes.children) other.setAttribute('aria-pressed',String(other.dataset.mode===mode)); renderGrid();}); modes.append(item); }
+  panel.append(header, modes, search, tabs, grid, status, credit, smoothCredit); document.body.append(panel);
+  function image(item) { const img = document.createElement('img'); img.loading = 'lazy'; img.decoding = 'async'; img.alt = item.name; img.title = item.name; img.draggable = false; img.src = base + item.id + '.webp?v=20261108-smooth1'; return img; }
   // Keep the existing textarea as the application's plain-text model, while editing
   // a contenteditable view so animated emoji can be seen before sending.
   function setupEditor() {
@@ -113,15 +115,15 @@
     const filtered = entries.filter(item => (category === 'All' || item.category === category) && (!q || (item.name + ' ' + (categories[item.category] || '')).toLocaleLowerCase().includes(q)));
     const fragment = document.createDocumentFragment();
     for (const item of filtered) {
-      const option = document.createElement('button'); option.type = 'button'; option.title = item.name; option.setAttribute('aria-label', item.name); option.append(image(item));
+      const option = document.createElement('button'); option.type = 'button'; option.title = item.name; option.setAttribute('aria-label', item.name); option.append(image(item)); if(pickerMode==='sticker') option.classList.add('lce-sticker-option');
       option.addEventListener('click', () => {
         const start = input.selectionStart, end = input.selectionEnd;
-        input.setRangeText('[lce:' + item.id + ']', start, end, 'end');
+        if(pickerMode==='sticker') { if(input.value.trim()) { status.textContent='For sticker, send or clear current text.'; return; } input.value='[lce:' + item.id + ']'; composer.requestSubmit(); } else input.setRangeText('[lce:' + item.id + ']', start, end, 'end');
         input.dispatchEvent(new Event('input', {bubbles:true})); input.focus(); hide();
       }); fragment.append(option);
     }
     grid.replaceChildren(fragment); grid.scrollTop = 0;
-    status.textContent = filtered.length ? `Found: ${filtered.length}` : 'No emoji found';
+    status.textContent = filtered.length ? (pickerMode==='sticker' ? `Animated Emoji Stickers: ${filtered.length}` : `Found: ${filtered.length}`) : 'Nothing found';
     position();
   }
   function replaceText(root) {
@@ -148,8 +150,8 @@
     else el.querySelectorAll?.('.message-text').forEach(replaceText);
   }
   function load() {
-    return loadPromise ||= fetch(new URL('emoji-catalog.js?v=20261107-2', scriptUrl), {credentials:'same-origin'}).then(r => {
-      if (!r.ok) throw Error('Could not load catalog'); return r.json();
+    return loadPromise ||= fetch('assets/emoji-catalog.js?v=20261107-2', {credentials:'same-origin'}).then(r => {
+      if (!r.ok) throw Error('Failed to load catalog'); return r.json();
     }).then(data => {
       entries = data.filter(x => /^[a-f0-9]{16}$/.test(x.id) && typeof x.name === 'string' && Object.hasOwn(categories, x.category));
       byId = new Map(entries.map(x => [x.id, x])); messages.querySelectorAll('.message-text').forEach(replaceText); return entries;
@@ -157,8 +159,8 @@
   }
   button.addEventListener('click', async () => {
     if (!panel.hidden) { hide(); return; }
-    panel.hidden = false; button.setAttribute('aria-expanded','true'); status.textContent = 'Loading emoji…'; position();
-    try { await load(); buildTabs(); renderGrid(); } catch { status.textContent = 'Could not load the catalog. Please try again.'; }
+    panel.hidden = false; button.setAttribute('aria-expanded','true'); status.textContent = 'Loading the catalog…'; position();
+    try { await load(); buildTabs(); renderGrid(); } catch { status.textContent = 'Failed to load directory. Try again.'; }
   });
   close.addEventListener('click', hide); search.addEventListener('input', renderGrid);
   document.addEventListener('pointerdown', e => { if (!panel.hidden && !panel.contains(e.target) && !button.contains(e.target)) hide(); });

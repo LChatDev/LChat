@@ -1,5 +1,5 @@
-/* LChat · финальный слой Telegram Web A.
-   Грузить ПОСЛЕ minimal / gui-pro-max / lchatai-*. Перебивает glass и minimal. */
+/* LChat · final layer Telegram Web A.
+   Load AFTER minimal / gui-pro-max / lchatai-*. Interrupts glass and minimal. */
 
 :root:root,
 :root:root[data-lchat-theme="dark"] {
@@ -43,7 +43,7 @@
   --glass-shadow: none;
 }
 
-/* Desktop Web A: фиолетовый акцент как в telegram-tt dark */
+/* Desktop Web A: purple accent as in telegram-tt dark */
 @media (min-width: 761px) {
   :root:root,
   :root:root[data-lchat-theme="dark"] {
@@ -124,7 +124,7 @@ html, body,
   grid-template-columns: minmax(340px, 420px) minmax(0, 1fr);
 }
 
-/* ——— Sidebar (Web A: меню + поиск, без заголовка LChat) ——— */
+/* ——— Sidebar (Web A: menu + search, no title LChat) ——— */
 :root:root .sidebar {
   background: var(--tg-panel) !important;
   border-right: 1px solid var(--wa-border) !important;

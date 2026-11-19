@@ -1,8 +1,8 @@
 {
-  "name": "LChat — Messenger",
+  "name": "LChat — messenger",
   "short_name": "LChat",
-  "description": "Private chats, groups, channels, and calls",
-  "lang": "ru",
+  "description": "Personal chats, groups, channels and calls",
+  "lang": "en",
   "start_url": "/index.php",
   "scope": "/",
   "display": "standalone",

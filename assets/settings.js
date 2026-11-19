@@ -37,15 +37,15 @@
     try {
       const response = await fetch('settings.php', {credentials:'same-origin', cache:'no-store'});
       data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Could not load settings.');
+      if (!response.ok) throw new Error(data.error || 'Failed to load settings.');
     } catch (error) { report(error); return; }
     modal('Settings', body => {
       const form = document.createElement('form'); form.className = 'settings-form';
       const nameLabel = document.createElement('label'); nameLabel.textContent = 'Name';
       const name = document.createElement('input'); name.name='name'; name.required=true; name.minLength=2; name.maxLength=60; name.value=escapeText(data.profile.name); nameLabel.append(name);
-      const bioLabel = document.createElement('label'); bioLabel.textContent='Bio';
-      const bio = document.createElement('textarea'); bio.name='bio'; bio.rows=3; bio.maxLength=240; bio.placeholder='A few words about yourself'; bio.value=escapeText(data.settings.bio); bioLabel.append(bio);
-      const themeLabel = document.createElement('label'); themeLabel.textContent='Theme';
+      const bioLabel = document.createElement('label'); bioLabel.textContent='About';
+      const bio = document.createElement('textarea'); bio.name='bio'; bio.rows=3; bio.maxLength=240; bio.placeholder='A few words about myself'; bio.value=escapeText(data.settings.bio); bioLabel.append(bio);
+      const themeLabel = document.createElement('label'); themeLabel.textContent='Topic';
       const theme = document.createElement('select'); theme.name='theme';
       for (const [value,label] of [['dark','Dark'],['light','Light']]) {const option=document.createElement('option');option.value=value;option.textContent=label;theme.append(option);} theme.value=data.settings.theme || 'dark'; themeLabel.append(theme);
       const paletteLabel = document.createElement('div'); paletteLabel.className='settings-label'; paletteLabel.textContent='Accent color';
@@ -57,7 +57,10 @@
       const save=document.createElement('button');save.type='submit';save.className='primary wide';save.textContent='Save settings';
       form.append(nameLabel,bioLabel,themeLabel,paletteLabel,palette,compactLabel,error,save);
       form.onsubmit=async event=>{event.preventDefault();save.disabled=true;error.hidden=true;try{const before=await api('me');const response=await fetch('settings.php',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','X-CSRF-Token':before.csrf},body:JSON.stringify({name:name.value,bio:bio.value,theme:theme.value,accent:chosen,compact:compact.checked})});const result=await response.json();if(!response.ok)throw new Error(result.error||'Could not save settings.');const value={bio:bio.value,theme:theme.value,accent:chosen,compact:compact.checked?1:0};apply(value);localStorage.setItem('lchat-appearance',JSON.stringify(value));const user=app.getUser();if(user)user.name=name.value.trim();const avatar=document.getElementById('profile-button');avatar.title=user?.name||name.value.trim();avatar.firstChild && avatar.firstChild.nodeType===3 && (avatar.firstChild.textContent=(user?.name||name.value.trim()).slice(0,1).toUpperCase());document.getElementById('modal').close();toast('Settings saved');}catch(e){error.textContent=e.message||'Could not save settings.';error.hidden=false;}finally{save.disabled=false;}};
-      body.append(form);
+      const siteBox=document.createElement('div');siteBox.className='settings-site';
+      const siteTitle=document.createElement('h3');siteTitle.textContent='Permanent website';siteBox.append(siteTitle);
+      if(data.site){const link=document.createElement('a');link.href=data.site.url;link.target='_blank';link.rel='noopener';link.textContent=data.site.url;const edit=document.createElement('a');edit.href='sitecreator.php';edit.className='button subtle';edit.textContent='Edit';const remove=document.createElement('button');remove.type='button';remove.className='button subtle';remove.textContent='Delete site';remove.onclick=async()=>{if(!confirm('Delete the permanent site and all its files?'))return;remove.disabled=true;try{const response=await fetch('sitecreator-api.php',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':data.csrf},body:JSON.stringify({action:'delete'})});const result=await response.json();if(!response.ok)throw Error(result.error||'Failed to delete site.');siteBox.replaceChildren(siteTitle,document.createTextNode('Site deleted.'));toast('Site deleted');}catch(e){report(e);remove.disabled=false}};siteBox.append(link,edit,remove)}else{const p=document.createElement('p');p.className='muted small';p.textContent=data.site_permission==='approved'?'The site has not yet been created.':'Permission is granted in chat with @service after a request from a bot.';const open=document.createElement('a');open.href='sitecreator.php';open.className='button subtle';open.textContent='Open Site Creator';siteBox.append(p,open)}
+      body.append(form,siteBox);
     });
   });
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
