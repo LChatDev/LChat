@@ -40,7 +40,27 @@ public final class NativeActivity extends Activity {
  void job(Job job,Result result){int g=generation;worker.execute(()->{if(!alive||g!=generation)return;try{JSONObject d=job.run();handler.post(()->{if(alive&&g==generation){error.setVisibility(View.GONE);result.done(d);}});}catch(Exception e){handler.post(()->{if(alive&&g==generation){if(e instanceof MobileApi.Error&&((MobileApi.Error)e).code==401&&user!=null){user=null;stopService(new Intent(this,InboxService.class));auth(false);}error.setText(e.getMessage());error.setVisibility(View.VISIBLE);}});}});}
  void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
  void prompt(String title,Value cb){EditText e=input(title);new AlertDialog.Builder(this).setTitle(title).setView(e).setPositiveButton("Продолжить",(d,w)->cb.done(e.getText().toString().trim())).setNegativeButton("Отмена",null).show();}
- void auth(boolean register){screen="auth";chatId=0;shell(register?"Создать аккаунт":"Войти в LChat");ScrollView sc=new ScrollView(this);LinearLayout form=new LinearLayout(this);form.setOrientation(1);sc.addView(form);body.addView(sc);EditText name=input("Имя"),login=input(register?"Имя пользователя":"Логин или email"),email=input("Email"),pass=input("Пароль");pass.setInputType(129);if(register)add(form,name);add(form,login);if(register)add(form,email);add(form,pass);Button submit=button(register?"Зарегистрироваться":"Войти",()->{});submit.setOnClickListener(v->{submit.setEnabled(false);JSONObject data=register?NativeApi.json("name",name.getText().toString(),"username",login.getText().toString(),"email",email.getText().toString(),"password",pass.getText().toString()):NativeApi.json("login",login.getText().toString(),"password",pass.getText().toString());job(()->{try{api.get("me");api.post(register?"register":"login",data);return api.get("me");}finally{handler.post(()->submit.setEnabled(true));}},d->{user=d.optJSONObject("user");if(user!=null){home();startInbox();handle(getIntent());}else toast("Сервер не сохранил сессию входа");});});add(form,submit);add(form,button(register?"Уже есть аккаунт":"Регистрация",()->auth(!register)));}
+ void auth(boolean register){
+  screen="auth";chatId=0;shell(register?"Создать аккаунт":"Войти в LChat");
+  ScrollView sc=new ScrollView(this);LinearLayout form=new LinearLayout(this);form.setOrientation(1);sc.addView(form);body.addView(sc);
+  EditText name=input("Имя"),login=input(register?"Имя пользователя":"Логин или email"),email=input("Email"),pass=input("Пароль");pass.setInputType(129);
+  if(register)add(form,name);add(form,login);if(register)add(form,email);add(form,pass);
+  CheckBox consent=new CheckBox(this);consent.setText("Я принимаю пользовательское соглашение и ознакомлен с политикой конфиденциальности");consent.setTextColor(INK);
+  if(register){add(form,consent);add(form,button("Соглашение и конфиденциальность",()->startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(api.base+"legal.php")))));}
+  Button submit=button(register?"Зарегистрироваться":"Войти",()->{});
+  submit.setOnClickListener(v->{
+   if(register&&!consent.isChecked()){toast("Примите соглашение и ознакомьтесь с политикой конфиденциальности");return;}
+   submit.setEnabled(false);
+   JSONObject data=register?NativeApi.json("name",name.getText().toString(),"username",login.getText().toString(),"email",email.getText().toString(),"password",pass.getText().toString(),"accept_terms","1"):NativeApi.json("login",login.getText().toString(),"password",pass.getText().toString());
+   job(()->{try{api.get("me");JSONObject result=api.post(register?"register":"login",data);return result.optBoolean("verification_required")?result:api.get("me");}finally{handler.post(()->submit.setEnabled(true));}},d->{
+    if(d.optBoolean("verification_required")){new AlertDialog.Builder(this).setTitle("Подтвердите email").setMessage("Откройте ссылку из письма, затем войдите в приложение. Если письма нет, проверьте папку «Спам».").setPositiveButton("Перейти ко входу",(dialog,which)->auth(false)).show();return;}
+    user=d.optJSONObject("user");if(user!=null){home();startInbox();handle(getIntent());}else toast("Сервер не сохранил сессию входа");
+   });
+  });
+  add(form,submit);if(!register)add(form,button("Забыли пароль?",()->startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(api.base+"reset-password.php")))));
+  add(form,button(register?"Уже есть аккаунт":"Регистрация",()->auth(!register)));
+ }
+
  void home(){ui.home();}
  void renderChats(){ui.renderChats();}
  void avatar(LinearLayout row,String title,int id){

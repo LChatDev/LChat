@@ -5,12 +5,21 @@ header('X-Content-Type-Options: nosniff');
 
 $versions = [
     [
+        'version' => '2.2.1',
+        'date' => '2026-11-20',
+        'size' => '22.7 MB',
+        'sha256' => '1467890018f2fe83009a36410b95fd01d10d80af26411806ddf5265e188c105f',
+        'file' => 'https://github.com/LChatDev/LChat/releases/download/clients-2026.11.20/LChat-2.2.1-universal.apk',
+        'latest' => true,
+        'changes' => ['Agreement acceptance and email confirmation guidance.','Password reset link on the login screen.'],
+    ],
+    [
         'version' => '2.2.0',
         'date' => '30 October 2026',
         'size' => '22,7 MB',
         'sha256' => 'aafbe3a5ab22bc02b7fbd0be15a37c679c2b9e549aff2ad58cae3b354e5bb6fb',
         'file' => 'https://github.com/LChatDev/LChat/releases/download/android-v2.2.0/LChat-2.2.0-universal.apk',
-        'latest' => true,
+        'latest' => false,
         'changes' => [
             'Native interface of chats, groups and channels in the style LChat.',
             'Separate collapsible call screen and participant list.',
@@ -95,6 +104,7 @@ $versions = [
       </div>
     </section>
 
+<section class="install"><h2>LChat for Windows</h2><p>Portable client for Windows 10/11 x64. Close to tray; use Exit to end calls. No publisher signature.</p><a class="download" href="https://github.com/LChatDev/LChat/releases/download/clients-2026.11.20/LChat-1.0.0-Windows-x64.exe">Download EXE</a></section>
     <section class="versions" aria-labelledby="versions-title">
       <div class="section-heading"><div><span class="eyebrow">VERSION HISTORY</span><h2 id="versions-title">Available assemblies</h2></div><span><?= count($versions) ?> versions</span></div>
       <?php foreach ($versions as $index => $item): ?>
