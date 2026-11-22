@@ -1,66 +1,37 @@
-# LChat for Android
+# LChat for Android — 3.0.0
 
-Native Android client for the LChat PHP server: account registration and login, private chats, groups, channels, files, voice messages, bot keyboards, and internet voice calls. The app uses native Android screens, not a WebView. The native interface currently uses Russian labels; the web interface in this repository is English. Telegram Web A styling and animations belong to the web client and are not embedded in this APK.
+Native Java messenger screens and native WebRTC voice calls for the LChat PHP server. Default server: https://chat.lbs.su/. Android 8.0+ (API 26), target SDK 35, package `su.lbs.lchat`, version code 30. One universal APK includes ARM64, ARMv7, x86 and x86_64. The interface uses Russian labels and preserves the Pixel design.
 
-## Download and install
+[Download APK](https://github.com/LChatDev/LChat/releases/tag/android-v3.0.0) · [Русский](README_RU.md) · [Release and verification](RELEASE_3.0.0.md)
 
-Download **LChat-2.2.0-universal.apk** from [GitHub Releases](https://github.com/LChatDev/LChat/releases/tag/android-v2.2.0). This is one installable APK, not a split APK bundle. Install it over the previous LChat app to retain its local settings and session. It uses the same package and signing certificate as the previous 2.0.3 build.
+Install `LChat-3.0.0-universal.apk` over the previous official version. The signing certificate is retained. Grant microphone and notification access. No Telecom phone account is required. The normal `ACCESS_NETWORK_STATE` permission is now included and granted at installation; it prevents the reproduced native network-monitor abort.
 
-- Android 8.0 or later (min SDK 26; target SDK 35).
-- ARM64, ARMv7, x86 and x86_64 are included.
-- Package: `su.lbs.lchat`; version: `2.2.0`; version code: `22`.
-- Default server: `https://chat.lbs.su/`. Change the address from the app menu to use another compatible LChat server.
-- Grant microphone and notification permissions for calls. No Telecom phone account is required.
-- The server must have working HTTPS and the matching LChat mobile API. TURN is configured by the server administrator.
+## Native Calls v3
 
-The `.apk.sha256` release attachment contains the download checksum. In PowerShell, use `Get-FileHash .\LChat-2.2.0-universal.apk -Algorithm SHA256` to compare it.
+Android lifecycle and notification controls, the serial RTC thread, HTTP transport, audio routing, session state and cross-process lease journal are separate components. Network requests cannot block the audio queue. Late callbacks cannot revive ended calls. A completed hangup immediately releases the server participant; failed cleanup is retained for recovery. The call clock starts when a peer connects.
 
-## Calls and limitations
+Microphone mute, speaker/earpiece, available input-device selection, ICE restart, background calling and return from the notification are supported. Voice calls remain native; no WebView page or additional calling server is introduced. The PHP server supplies signaling and temporary TURN credentials. Keep HTTPS and a reachable TURN server available. Native video and screen sharing are not implemented.
 
-Voice calls run in a separate foreground audio process, with notification controls. Incoming calls and messages use server polling, not FCM. Android power management may delay polling or terminate the process; reopen the app after force-stop or reboot. This client supports voice calls, not native video or screen sharing.
+Incoming calls/messages use a user-visible polling foreground service rather than FCM. Android may delay polling in deep sleep or stop it after force-stop; reopen the app then. Active calls use a microphone foreground notification and a partial wake lock. Deep Doze, specific battery policies and real Bluetooth hardware require device testing.
 
-Release checks cover the archive CRCs, DEX checksums, four native ABI libraries, Android manifest, APK alignment and signature, including verification for Android 12/12L. The signing certificate matches 2.0.3. No physical phone was available for this release: on-device installation, microphone routing and background calling have not been verified. This is not a claim of compatibility with every device.
+## Messaging
 
-The Android client accepts text up to 10 MiB UTF-8 and displays long messages in pages. This requires a server that supports the same limit, including the updated chat.lbs.su. Samsung audio processing remains experimental; calls and large messages have not been tested on a physical phone. No crash report is sent automatically.
+Existing login/registration/email confirmation, private chats, groups, channels, bot keyboards, replies, reactions, message editing/deletion, files and voice messages are retained. The native file uploader retains its existing size limit; website features and limits may differ. This release changes the calling subsystem and does not replace the server configuration.
 
-## Build from source on Windows
+## Reproducible Windows build
 
-Required external tools:
-
-- JDK 21 (`javac`, `java`, `jar`, `keytool`).
-- Android SDK Platform 35 (`android.jar`).
-- Android SDK Build Tools 35.0.0 (`aapt2`, `zipalign`, `lib/d8.jar`, `lib/apksigner.jar`).
-- Extracted `io.github.webrtc-sdk:android:150.7871.01` AAR with `classes.jar` and `jni/{arm64-v8a,armeabi-v7a,x86,x86_64}/libjingle_peerconnection_so.so`.
-- Node.js to run the independent integrity test.
-
-From the repository root:
+Use JDK 21+ and Node.js for the independent APK check. Download pinned Google/Maven inputs with:
 
 ```powershell
-.\android\build.ps1 -JavaHome 'C:\tools\jdk-21' -BuildTools 'C:\tools\android-sdk\build-tools\35.0.0' -AndroidJar 'C:\tools\android-sdk\platforms\android-35\android.jar' -WebRtcDir 'C:\tools\webrtc-150.7871.01'
-node .\android\tests\apk-integrity.cjs .\android\LChat-2.2.0-universal.apk
+python android/setup-tools.py
+.\android\build.ps1 -JavaHome 'C:\tools\jdk-21' -BuildTools 'C:\LChat\android\sdk\build-tools\android-15' -AndroidJar 'C:\LChat\android\sdk\platform\android-35\android.jar' -WebRtcDir 'C:\LChat\android\sdk\webrtc-150.7871.08'
+node android/tests/apk-integrity.cjs android/LChat-3.0.0-universal.apk
 ```
 
-The script creates `LChat.apk`, the versioned universal APK and its SHA-256 file. A new checkout generates its own signing key in `android/signing/`; such a build cannot update the official APK without uninstalling it first. Keep your signing key and password private and backed up. To update your own builds, reuse your own signing directory. Official release keys are not included in this repository.
+Adapt paths to your checkout. `build.ps1` produces `LChat.apk`, the versioned APK and its SHA-256 file; it verifies alignment and signatures including API 31/32. The downloader verifies supplier checksums. No globally installed runtime is modified.
 
-The Android sources are distributed under the repository's GPL-3.0 license. WebRTC notices are in `licenses/` and bundled in the APK. No database credentials, installation key, bot tokens or permanent TURN credentials are bundled.
+Reuse your existing private `android/signing/` directory to update your own installations. A fresh checkout generates a different key and cannot update an APK signed with another key. Never publish `signing/`, its password, SDK downloads or server secrets. Third-party notices are included in the APK and `licenses/`. The source inherits the repository GPL license.
 
-## Interface and calls in 2.2.0
+## Actual checks
 
-Native dark chat lists, circular avatars, a compact message composer, message replies,
-reactions and editing, date separators, channel/group filters, file lists, invitations,
-and owner-only name and membership controls. Search and file lists on the website cover
-loaded messages. The app retains the 10 MiB UTF-8 text limit.
-
-The full-screen call view can be collapsed into the chat banner without stopping the
-foreground audio service. It includes participants, mute, speaker and reconnect actions.
-Android 12+ speaker routing uses `AudioManager.setCommunicationDevice`; older versions
-retain the legacy route. TURN credentials refresh during polling; closed peer callbacks
-are ignored. Update the PHP server alongside the APK for `chat.info`, `chat.update`,
-`channel.remove` and credential refresh support.
-
-This is a prerelease. Compilation, signing and server/browser integration checks pass.
-Audio quality, native crash recovery and background calls still require a physical-device
-test, especially on the Samsung devices with previously reported native WebRTC aborts.
-The native WebRTC library is unchanged; this release does not prove those aborts fixed.
-
-Audio route reference: https://developer.android.com/reference/android/media/AudioManager#setCommunicationDevice(android.media.AudioDeviceInfo)
+[Release notes](RELEASE_3.0.0.md) document the Android 12 crash reproduction, native Android-to-Chromium calls through TURN, repeated entry, audio controls, background/screen-off RTP and cleanup checks. [Test instructions](tests/README.md) include host-JVM regressions and the private instrumentation runner. No claim is made of testing on physical Samsung hardware or every Android release.

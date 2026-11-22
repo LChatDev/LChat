@@ -5,12 +5,21 @@ header('X-Content-Type-Options: nosniff');
 
 $versions = [
     [
+        'version' => '3.0.0',
+        'date' => '2026-11-22',
+        'size' => '22.7 MB',
+        'sha256' => '868dc3280f85de11fd883e9ea2db1c9250d3bd4d10d6537f015c42f0cb3481ae',
+        'file' => 'https://github.com/LChatDev/LChat/releases/download/android-v3.0.0/LChat-3.0.0-universal.apk',
+        'latest' => true,
+        'changes' => ['Native Calls v3: audio, signaling and lifecycle rebuilt.','Fixed reproduced Android 12 crash: required network-state permission.','Tested two-way audio through TURN, background, screen off and repeat calls.'],
+    ],
+    [
         'version' => '2.2.3',
         'date' => '2026-11-21',
         'size' => '21.9 MB',
         'sha256' => 'dda7dc696a25790b18150595e49aabecbca95a8688e09355128210dbc47c988a',
         'file' => 'https://github.com/LChatDev/LChat/releases/download/android-v2.2.3/LChat-2.2.3-universal.apk',
-        'latest' => true,
+        'latest' => false,
         'changes' => ['Pixel palette and chat wallpaper.','Updated launcher icon and sharper native radii.'],
     ],
     [
