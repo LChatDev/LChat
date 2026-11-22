@@ -1,34 +1,34 @@
 <?php
 declare(strict_types=1);
 define('LCHAT_LEGAL_PAGE', true);
-$title = 'Rules, payment and returns';
+$title = 'Правила, оплата и возвраты';
 $content = <<<'HTML'
-<p><strong>Preliminary edition of November 8, 2026.</strong> Here are the rules LChat, information about tickets and Premium, as well as the procedure for applying for a refund. Page complements <a href="terms.php">user agreement</a> and <a href="privacy.php">privacy policy</a>.</p>
-<p class="notice"><strong>Payment not yet connected.</strong> Buy tickets or issue Premium not allowed now. Listed on the page <a href="pay.php">prices and features Premium</a> preliminary; Available options and terms will be confirmed prior to sales. Tickets are still issued by the administration.</p>
+<p><strong>Редакция от 22 ноября 2026 года.</strong> Здесь собраны правила LChat, сведения о тикетах и Premium, а также порядок обращения за возвратом. Страница дополняет <a href="terms.php">публичную оферту</a> и <a href="privacy.php">политику в отношении обработки персональных данных</a>.</p>
+<p class="notice"><strong>Оплата пока не подключена.</strong> Купить тикеты или оформить Premium сейчас нельзя. Указанные на странице <a href="pay.php">цены и возможности Premium</a> предварительные; доступные возможности и условия будут уточнены до начала продаж. Тикеты пока выдаются администрацией.</p>
 
-<h2>1. Terms of use LChat</h2>
-<p>LChat provides messaging and file sharing, chats, groups, channels, calls and bots. Use the service legally and respect other members. Fraud, spam, threats, distribution of malicious code, hacking attempts, publication of other people’s personal data without legal grounds and other illegal use are prohibited..</p>
-<p>The user is responsible for the security of his account and the materials he posts. Upload and distribute only content that you have the rights or other legal rights to use. In case of violations, the administration may restrict access or remove materials in accordance with the agreement and applicable law.</p>
+<h2>1. Правила использования LChat</h2>
+<p>LChat предоставляет обмен сообщениями и файлами, чаты, группы, каналы, звонки и ботов. Пользуйтесь сервисом законно и уважайте других участников. Запрещены мошенничество, спам, угрозы, распространение вредоносного кода, попытки взлома, публикация чужих персональных данных без законных оснований и иное противоправное использование.</p>
+<p>Пользователь отвечает за безопасность своего аккаунта и размещаемые им материалы. Загружайте и распространяйте только те материалы, на использование которых у вас есть права или иные законные основания. При нарушениях администрация может ограничить доступ или удалить материалы в соответствии с соглашением и применимым законом.</p>
 
-<h2>2. Tickets and gifts</h2>
-<p>Tickets - internal units LChat, which are used to purchase gifts within the service. Now you cannot buy them for money; the administration can issue them to users. The number of tickets and the value of the gift are shown before the transaction is confirmed. The gift can be added to your collection or sent to another user.</p>
-<p>Before sending, check the recipient: after confirmation, the gift appears in his collection. If you make a mistake or have a technical problem, please contact support. The ability to remedy depends on the circumstances and does not affect your rights under the law..</p>
+<h2>2. Тикеты и подарки</h2>
+<p>Тикеты — внутренние единицы LChat, которые используются для покупки подарков внутри сервиса. Сейчас приобрести их за деньги нельзя; администрация может выдавать их пользователям. Количество тикетов и стоимость подарка показываются до подтверждения операции. Подарок можно добавить в свою коллекцию или отправить другому пользователю.</p>
+<p>Перед отправкой проверьте получателя: после подтверждения подарок появляется в его коллекции. Если вы ошиблись или возникла техническая проблема, обратитесь в поддержку. Возможность исправления зависит от обстоятельств и не отменяет ваши права по закону.</p>
 
-<h2>3. Premium and future payment</h2>
-<p>Premium and its benefits are still being developed. Preliminary price — 199 ₽ per month; guideline for tickets - 10 tickets per 5 ₽. Before the start of sales, the final composition, price, delivery procedure, terms and other essential conditions will be published. There are no automatic debits at this time..</p>
-<p>If automatic renewal becomes available in the future, its conditions, cost, frequency and method of deactivation will be separately presented until the user agrees. Payment methods and contractor details will be indicated before accepting payments..</p>
+<h2>3. Premium и будущая оплата</h2>
+<p>Premium и его преимущества пока разрабатываются. Предварительная цена — 199 ₽ за месяц; ориентир для тикетов — 10 тикетов за 5 ₽. До начала продаж будут опубликованы окончательный состав, цена, порядок предоставления, сроки и иные существенные условия. Никаких автоматических списаний сейчас не производится.</p>
+<p>Если в дальнейшем появится автоматическое продление, его условия, стоимость, периодичность и способ отключения будут отдельно представлены до согласия пользователя. Способы оплаты и данные исполнителя будут указаны до начала приёма платежей.</p>
 
-<h2 id="refund">4. Refusal and refund</h2>
-<p>Since the payment system is not connected, paid purchases of tickets and Premium through this page are currently not possible. Tickets issued free of charge are not a cash payment. If in the future you have a question about payment, non-received service, erroneous or repeated debit, please send a support request to <a href="mailto:admin@example.com">admin@example.com</a>.</p>
-<p>Please indicate your login in your request LChat, date and amount of payment, description of the problem and transaction ID or receipt if you have one. Don’t send your password, PIN-code, full card number, CVC/CVV or codes from SMS. If necessary, support will clarify the information necessary to confirm the payment and consider the request.</p>
-<p>When consumer protection rules apply to the relationship, the user has the right to withdraw from the service contract in the manner prescribed by law. In case of such a refusal, the actually incurred and justified expenses of the performer associated with the fulfillment of obligations may be taken into account, to the extent permitted by law. Justified demands for improper provision of services are considered in accordance with the law. Your statutory rights are unaffected by these rules.</p>
-<p>The basis, amount, method and period of return are determined taking into account the circumstances of the application, method of payment and the requirements of applicable law. For certain claims related to violation of deadlines or deficiencies in the service, Article 31 of the Law of the Russian Federation “On the Protection of Consumer Rights” provides for a ten-day period for satisfaction from the date of presentation of the claim. The corresponding legal deadlines apply to other requests..</p>
+<h2 id="refund">4. Отказ и возврат денежных средств</h2>
+<p>Поскольку платёжная система не подключена, платные покупки тикетов и Premium через эту страницу сейчас невозможны. Тикеты, выданные бесплатно, не являются денежным платежом. Если в будущем возникнет вопрос об оплате, неполученной услуге, ошибочном или повторном списании, направьте обращение в поддержку по адресу <a href="mailto:admin@lbs.su">admin@lbs.su</a>.</p>
+<p>В обращении укажите логин LChat, дату и сумму платежа, описание проблемы и идентификатор операции или чек, если он у вас есть. Не отправляйте пароль, PIN-код, полный номер карты, CVC/CVV или коды из SMS. При необходимости поддержка уточнит сведения, необходимые для подтверждения платежа и рассмотрения обращения.</p>
+<p>Когда к отношениям применяются правила о защите прав потребителей, пользователь вправе отказаться от договора об оказании услуг в предусмотренном законом порядке. При таком отказе могут учитываться фактически понесённые и обоснованные расходы исполнителя, связанные с исполнением обязательств, в пределах, допускаемых законом. Обоснованные требования при ненадлежащем оказании услуги рассматриваются в соответствии с законом. Установленные законом права не ограничиваются этими правилами.</p>
+<p>Основание, сумма, способ и срок возврата определяются с учётом обстоятельств обращения, способа оплаты и требований применимого законодательства. Для отдельных требований, связанных с нарушением сроков или недостатками услуги, статья 31 Закона РФ «О защите прав потребителей» предусматривает десятидневный срок удовлетворения со дня предъявления требования. К другим обращениям применяются соответствующие им законные сроки.</p>
 
-<h2>5. Data and security</h2>
-<p>Data processing is described in the <a href="privacy.php">privacy policy</a>. Messages are available to participants in the corresponding chat; the administration can view them for moderation and processing of requests, as specified in the agreement. If you suspect hacking or erroneous access, please report to support.</p>
+<h2>5. Данные и безопасность</h2>
+<p>Порядок обработки данных описан в <a href="privacy.php">политике конфиденциальности</a>. Сообщения доступны участникам соответствующего чата; администрация может просматривать их для модерации и обработки обращений, как указано в соглашении. О подозрении на взлом или ошибочном доступе сообщите в поддержку.</p>
 
-<h2>6. Contact and changes</h2>
-<p>For questions about rules, payments and returns, write to <a href="mailto:admin@example.com">admin@example.com</a>. The current version of documents is posted on the website. Before paid features are launched, artist details and final terms must be published.</p>
-<p>Consumer rights information is available on <a href="https://zpp.rospotrebnadzor.ru/npa/federal/192115" target="_blank" rel="noopener noreferrer">Rospotrebnadzor portal</a>.</p>
+<h2>6. Контакты и изменения</h2>
+<p>По вопросам правил, платежей и возвратов пишите на <a href="mailto:admin@lbs.su">admin@lbs.su</a>. Актуальная версия документов размещается на сайте. До запуска платных функций данные исполнителя и окончательные условия должны быть опубликованы.</p>
+<p>Информацию о правах потребителей можно найти на <a href="https://zpp.rospotrebnadzor.ru/npa/federal/192115" target="_blank" rel="noopener noreferrer">портале Роспотребнадзора</a>.</p>
 HTML;
 require __DIR__ . '/legal-page.php';
