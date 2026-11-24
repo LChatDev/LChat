@@ -1,3 +1,6 @@
+> Current downloads: see [CLIENTS.md](CLIENTS.md). Previous application binaries have been withdrawn. The supplied APK uses a different signing key; old build/test instructions below describe retained source, not this binary.
+> Актуальный APK: см. CLIENTS.md. Старые сборки удалены; подпись APK отличается. Исторические инструкции ниже относятся к сохранённым исходникам.
+
 # LChat
 
 <!-- live-sync-20261119 -->
@@ -18,7 +21,7 @@ The web interface uses selected components from the open-source Telegram Web A i
 
 ## Android app
 
-Download the installable [LChat 2.2.0 test APK](https://github.com/LChatDev/LChat/releases/download/android-v2.2.0/LChat-2.2.0-universal.apk) (Android 8.0+). Native Android source, build instructions and testing limitations are in [android/README.md](android/README.md). Release assets also include a SHA-256 checksum. The native app has its own interface; web styling changes do not automatically change the APK.
+Download the installable LChat 2.2.0 test APK (previous binary withdrawn / прежняя сборка удалена) (Android 8.0+). Native Android source, build instructions and testing limitations are in [android/README.md](android/README.md). Release assets also include a SHA-256 checksum. The native app has its own interface; web styling changes do not automatically change the APK.
 
 ## Server requirements
 

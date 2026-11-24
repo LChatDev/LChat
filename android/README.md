@@ -1,8 +1,11 @@
+> Current downloads: see [CLIENTS.md](../CLIENTS.md). Previous application binaries have been withdrawn. The supplied APK uses a different signing key; old build/test instructions below describe retained source, not this binary.
+> Актуальный APK: см. CLIENTS.md. Старые сборки удалены; подпись APK отличается. Исторические инструкции ниже относятся к сохранённым исходникам.
+
 # LChat for Android — 3.0.0
 
 Native Java messenger screens and native WebRTC voice calls for the LChat PHP server. Default server: https://chat.lbs.su/. Android 8.0+ (API 26), target SDK 35, package `su.lbs.lchat`, version code 30. One universal APK includes ARM64, ARMv7, x86 and x86_64. The interface uses Russian labels and preserves the Pixel design.
 
-[Download APK](https://github.com/LChatDev/LChat/releases/tag/android-v3.0.0) · [Русский](README_RU.md) · [Release and verification](RELEASE_3.0.0.md)
+Download APK (previous binary withdrawn / прежняя сборка удалена) · [Русский](README_RU.md) · [Release and verification](RELEASE_3.0.0.md)
 
 Install `LChat-3.0.0-universal.apk` over the previous official version. The signing certificate is retained. Grant microphone and notification access. No Telecom phone account is required. The normal `ACCESS_NETWORK_STATE` permission is now included and granted at installation; it prevents the reproduced native network-monitor abort.
 
