@@ -3,6 +3,7 @@ declare(strict_types=1);
 header('Cache-Control: no-store, max-age=0');
 header('X-Content-Type-Options: nosniff');
 
+$isCustom = ($_GET['branch'] ?? '') === 'userhosts';
 $versions = [
     [
         'version' => '2.1 (210)',
@@ -14,6 +15,16 @@ $versions = [
         'changes' => ['APK supplied by the owner; published without rebuilding.','Different signing key: cannot update old signed builds.'],
     ],
 ];
+if ($isCustom) $versions = [[
+    'version' => '1.0-custom (2.1)',
+    'date' => '2026-11-25',
+    'size' => '494.9 KB',
+    'sha256' => '088d7207391acc2b4a85603a717c4a75637064c553b7699c1fb8162f64e4a9b3',
+    'file' => 'https://data.lbs.su/lchat-apps/userhosts/LChatCustom.apk',
+    'latest' => true,
+    'changes' => ['Owner-supplied APK for self-hosted LChat servers.','Separate app package; can be installed alongside regular LChat.'],
+]];
+
 ?>
 <!doctype html>
 <html lang="en">
@@ -38,10 +49,11 @@ $versions = [
         <span class="eyebrow">OFFICIAL ASSEMBLY LCHAT</span>
         <h1>Appendix LChat</h1>
         <p>Native chats, groups, channels, voice messages and internet calls. Select version and download APK directly from this site.</p>
-        <div class="requirements"><span>Android 7.0+</span><span>APK · 2.1 · code 210</span></div>
+        <div class="requirements"><span>Android 7.0+</span><span><?= $isCustom ? 'Custom · 1.0 · code 1' : 'LChat · 2.1 · code 210' ?></span></div>
       </div>
     </section>
 
+<nav aria-label="Application variants" style="display:flex;flex-wrap:wrap;gap:12px;margin:24px 0"><a class="download" href="application.php" <?= !$isCustom ? 'aria-current="page"' : '' ?>>Regular version</a><a class="download" href="application.php?branch=userhosts" <?= $isCustom ? 'aria-current="page"' : '' ?>>Your server</a></nav>
 <section class="versions" aria-labelledby="versions-title">
       <div class="section-heading"><div><span class="eyebrow">VERSION HISTORY</span><h2 id="versions-title">Available assemblies</h2></div><span><?= count($versions) ?> versions</span></div>
       <?php foreach ($versions as $index => $item): ?>
@@ -61,7 +73,7 @@ $versions = [
 
     <section class="install">
       <h2>How to install</h2>
-      <ol><li>Download the latest version APK.</li><li>Open the file on your phone.</li><li>If Android will ask for permission, allow installation from this source.</li><li>This APK uses a different signing key. Preserve needed local data before uninstalling the old app; Android cannot update it with this file.</li></ol>
+      <ol><li>Download the latest version APK.</li><li>Open the file on your phone.</li><li>If Android will ask for permission, allow installation from this source.</li><li><?php if ($isCustom): ?>Custom is a separate Android application and can be installed alongside regular LChat.<?php else: ?>This regular APK uses a different signing key from retired builds. Preserve needed local data before uninstalling an older app.<?php endif; ?></li></ol>
       <p>Old versions are left for diagnostic purposes. For normal use, select the build marked ”Latest”».</p>
     </section>
   </main>
