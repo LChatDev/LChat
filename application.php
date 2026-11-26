@@ -6,21 +6,21 @@ header('X-Content-Type-Options: nosniff');
 $isCustom = ($_GET['branch'] ?? '') === 'userhosts';
 $versions = [
     [
-        'version' => '2.1 (210)',
-        'date' => '2026-11-24',
-        'size' => '484.7 KB',
-        'sha256' => '0f995e3e153f9034c59e74bc115108c152714590bd02b4f9850521dd6a8d18d1',
-        'file' => 'https://data.lbs.su/lchat-apps/LChat.apk',
+        'version' => '2.2 (220)',
+        'date' => '2026-11-26',
+        'size' => '486.0 KB',
+        'sha256' => '10bc1cda1585160d771b6808810371ae800182c46504ce7884ba505e5fb8e5f3',
+        'file' => 'https://data.lbs.su/lchat-apps/LChat.apk?v=220',
         'latest' => true,
         'changes' => ['APK supplied by the owner; published without rebuilding.','Different signing key: cannot update old signed builds.'],
     ],
 ];
 if ($isCustom) $versions = [[
-    'version' => '1.0-custom (2.1)',
-    'date' => '2026-11-25',
-    'size' => '494.9 KB',
-    'sha256' => '088d7207391acc2b4a85603a717c4a75637064c553b7699c1fb8162f64e4a9b3',
-    'file' => 'https://data.lbs.su/lchat-apps/userhosts/LChatCustom.apk',
+    'version' => '1.1-custom (2.2)',
+    'date' => '2026-11-26',
+    'size' => '496.1 KB',
+    'sha256' => '5f2a06eb6f076587f00d0d8338eef6b82a18efb12ed194c2db77e41cb2545c15',
+    'file' => 'https://data.lbs.su/lchat-apps/userhosts/LChatCustom.apk?v=11',
     'latest' => true,
     'changes' => ['Owner-supplied APK for self-hosted LChat servers.','Separate app package; can be installed alongside regular LChat.'],
 ]];
@@ -49,7 +49,7 @@ if ($isCustom) $versions = [[
         <span class="eyebrow">OFFICIAL ASSEMBLY LCHAT</span>
         <h1>Appendix LChat</h1>
         <p>Native chats, groups, channels, voice messages and internet calls. Select version and download APK directly from this site.</p>
-        <div class="requirements"><span>Android 7.0+</span><span><?= $isCustom ? 'Custom · 1.0 · code 1' : 'LChat · 2.1 · code 210' ?></span></div>
+        <div class="requirements"><span>Android 7.0+</span><span><?= $isCustom ? 'Custom · 1.1 · code 11' : 'LChat · 2.2 · code 220' ?></span></div>
       </div>
     </section>
 
