@@ -10,6 +10,7 @@ try {
     if (!hash_equals($ctx['csrf'], $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '')) fail(403, 'Refresh the page and try again.');
     $chatId = (int)($_POST['chat_id'] ?? 0); $chat = member($chatId, (int)$user['id']);
     if ($chat['kind'] === 'channel' && $chat['role'] !== 'owner') fail(403, 'Only the owner can post in this channel.');
+    tools_assert_write($chatId,(int)$user['id']);
     $voice = ($_POST['voice'] ?? '') === '1'; $duration = (int)($_POST['duration'] ?? 0);
     if ($voice && ($duration < 1 || $duration > 180)) fail(422, 'Voice message: 1 to 180 seconds.');
     $nonce = field($_POST, 'nonce', 16, 64);
